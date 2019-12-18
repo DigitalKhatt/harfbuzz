@@ -469,6 +469,8 @@ struct hb_ot_apply_context_t :
   hb_mask_t lookup_mask;
   unsigned int table_index; /* GSUB/GPOS */
   unsigned int lookup_index;
+  //VisualMetaFont
+  unsigned int subtable_index;
   unsigned int lookup_props;
   unsigned int nesting_level_left;
   unsigned int debug_depth;
@@ -617,6 +619,23 @@ struct hb_ot_apply_context_t :
     buffer->output_glyph (glyph_index);
   }
 };
+
+// Added for VisualMetaFont
+template <typename TSubTable>
+inline bool Lookup::dispatch (hb_ot_apply_context_t *c) const
+{
+  unsigned int lookup_type = get_type ();
+  // TRACE_DISPATCH (this, lookup_type);
+  hb_no_trace_t<bool> trace;
+  unsigned int count = get_subtable_count ();
+  for (unsigned int i = 0; i < count; i++)
+  {
+    c->subtable_index = i;
+    bool r = get_subtable<TSubTable> (i).dispatch (c, lookup_type);
+    if (c->stop_sublookup_iteration (r)) return_trace (r);
+  }
+  return_trace (c->default_return_value ());
+}
 
 
 struct hb_get_subtables_context_t :
@@ -2832,8 +2851,12 @@ struct hb_ot_layout_lookup_accelerator_t
   bool apply (hb_ot_apply_context_t *c) const
   {
     for (unsigned int i = 0; i < subtables.length; i++)
+    {
+      // VisualMetaFont
+      c->subtable_index = i;
       if (subtables[i].apply (c))
 	return true;
+    }
     return false;
   }
 

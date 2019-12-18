@@ -719,4 +719,54 @@ hb_font_set_var_named_instance (hb_font_t *font,
 
 HB_END_DECLS
 
+/* Added for VisualMetaFont */
+
+typedef struct hb_cursive_anchor_context_t
+{
+  enum Type { entry, exit, mark, base };
+  hb_codepoint_t glyph_id;
+  hb_codepoint_t base_glyph_id;
+  double lefttatweel ;
+  double righttatweel;
+  unsigned int lookup_index;
+  unsigned int subtable_index;
+  Type type;
+} hb_cursive_anchor_context_t;
+
+typedef hb_bool_t (*hb_font_get_cursive_anchor_func_t) (
+    hb_font_t *font,
+    void *font_data,
+    hb_cursive_anchor_context_t *context,
+    hb_position_t *x,
+    hb_position_t *y,
+    void *user_data);
+
+namespace OT {
+struct hb_ot_apply_context_t;
+}
+
+typedef struct hb_substitution_context_t
+{  
+  OT::hb_ot_apply_context_t *ot_context;
+  unsigned int substitute;
+} hb_substitution_context_t;
+
+typedef hb_bool_t (*hb_font_get_substitution_func_t) (
+    hb_font_t *font,
+    void *font_data,
+    hb_substitution_context_t *context,
+    void *user_data);
+    
+HB_EXTERN void
+hb_font_funcs_set_cursive_anchor_func (hb_font_funcs_t *ffuncs,
+				       hb_font_get_cursive_anchor_func_t func,
+				       void *user_data,
+				       hb_destroy_func_t destroy);
+
+HB_EXTERN void
+hb_font_funcs_set_substitution_func (hb_font_funcs_t *ffuncs,
+				     hb_font_get_substitution_func_t func,
+				     void *user_data,
+				     hb_destroy_func_t destroy);
+
 #endif /* HB_FONT_H */

@@ -386,7 +386,7 @@ hb_shape_plan_execute (hb_shape_plan_t    *shape_plan,
     return true;
 
   assert (!hb_object_is_immutable (buffer));
-  assert (buffer->content_type == HB_BUFFER_CONTENT_TYPE_UNICODE);
+  // VisualMetaFont assert (buffer->content_type == HB_BUFFER_CONTENT_TYPE_UNICODE);
 
   if (unlikely (hb_object_is_inert (shape_plan)))
     return false;

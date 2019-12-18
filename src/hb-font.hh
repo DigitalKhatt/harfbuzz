@@ -39,6 +39,7 @@
  * hb_font_funcs_t
  */
 
+//added cursive_anchor and substitution for VisualMetaFont
 #define HB_FONT_FUNCS_IMPLEMENT_CALLBACKS \
   HB_FONT_FUNC_IMPLEMENT (font_h_extents) \
   HB_FONT_FUNC_IMPLEMENT (font_v_extents) \
@@ -57,6 +58,8 @@
   HB_FONT_FUNC_IMPLEMENT (glyph_contour_point) \
   HB_FONT_FUNC_IMPLEMENT (glyph_name) \
   HB_FONT_FUNC_IMPLEMENT (glyph_from_name) \
+  HB_FONT_FUNC_IMPLEMENT (cursive_anchor) \
+  HB_FONT_FUNC_IMPLEMENT (substitution) \
   /* ^--- Add new callbacks here */
 
 struct hb_font_funcs_t
@@ -366,6 +369,24 @@ struct hb_font_t
 					 name, len,
 					 glyph,
 					 klass->user_data.glyph_from_name);
+  }
+
+  //VisualMetaFont
+  hb_bool_t
+  get_cursive_anchor (hb_cursive_anchor_context_t *context,
+				hb_position_t *x,
+				hb_position_t *y)
+  {
+   
+    return klass->get.f.cursive_anchor (this, user_data, context, x, y,
+					klass->user_data.cursive_anchor);
+  }
+
+   // VisualMetaFont
+  hb_bool_t get_substitution (hb_substitution_context_t *context)
+  {
+
+    return klass->get.f.substitution(this, user_data, context,klass->user_data.substitution);
   }
 
 

@@ -469,6 +469,34 @@ hb_font_get_glyph_from_name_default (hb_font_t *font,
   return font->parent->get_glyph_from_name (name, len, glyph);
 }
 
+/* Added for VisualMetaFont */
+
+#define hb_font_get_cursive_anchor_nil hb_font_get_cursive_anchor_default
+static hb_bool_t
+hb_font_get_cursive_anchor_default (hb_font_t *font,
+				    void *font_data,
+				    hb_cursive_anchor_context_t *context,
+				    hb_position_t *x,
+				    hb_position_t *y,
+				    void *user_data)
+{
+  *x = 0;
+  *y = 0;
+
+  return false;
+}
+
+#define hb_font_get_substitution_nil hb_font_get_substitution_default
+static hb_bool_t
+hb_font_get_substitution_default (hb_font_t *font,
+				  void *font_data,
+				  hb_substitution_context_t *context,
+				  void *user_data)
+{
+
+  return false;
+}
+
 DEFINE_NULL_INSTANCE (hb_font_funcs_t) =
 {
   HB_OBJECT_HEADER_STATIC,

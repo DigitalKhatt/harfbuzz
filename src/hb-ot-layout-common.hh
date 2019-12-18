@@ -825,6 +825,9 @@ struct Lookup
     return_trace (c->default_return_value ());
   }
 
+  // Added by VisualMetaFont
+  template <typename TSubTable>
+  inline bool dispatch (hb_ot_apply_context_t *c) const;
   bool serialize (hb_serialize_context_t *c,
 		  unsigned int lookup_type,
 		  uint32_t lookup_props,

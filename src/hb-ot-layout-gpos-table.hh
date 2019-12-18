@@ -124,6 +124,10 @@ struct ValueFormat : HBUINT16
       if (unlikely (!horizontal)) glyph_pos.y_advance -= font->em_scale_y (get_short (values, &ret));
       values++;
     }
+    
+    // VisualMetaFont
+    glyph_pos.lookup_index = c->lookup_index;
+    glyph_pos.subtable_index = c->subtable_index;
 
     if (!has_device ()) return ret;
 
@@ -490,14 +494,63 @@ struct MarkArray : ArrayOf<MarkRecord>	/* Array of MarkRecords--in Coverage orde
     float mark_x, mark_y, base_x, base_y;
 
     buffer->unsafe_to_break (glyph_pos, buffer->idx);
-    mark_anchor.get_anchor (c, buffer->cur().codepoint, &mark_x, &mark_y);
-    glyph_anchor.get_anchor (c, buffer->info[glyph_pos].codepoint, &base_x, &base_y);
+
+    // VisualMetaFont
+    auto infomark = buffer->cur ();
+    if (infomark.lefttatweel != 0 || infomark.righttatweel != 0)
+    {
+      hb_cursive_anchor_context_t anchor_context;
+      anchor_context.glyph_id = buffer->cur ().codepoint;
+      anchor_context.base_glyph_id = buffer->info[glyph_pos].codepoint;
+      anchor_context.lookup_index = c->lookup_index;
+      anchor_context.subtable_index = c->subtable_index;
+      anchor_context.lefttatweel = infomark.lefttatweel;
+      anchor_context.righttatweel = infomark.righttatweel;
+      anchor_context.type = hb_cursive_anchor_context_t::mark;
+      hb_position_t xCoordinate;
+      hb_position_t yCoordinate;
+      c->font->get_cursive_anchor (&anchor_context, &xCoordinate, &yCoordinate);
+      mark_x = c->font->em_fscale_x (xCoordinate);
+      mark_y = c->font->em_fscale_y (yCoordinate);
+    }
+    else
+    {
+      mark_anchor.get_anchor (c, buffer->cur ().codepoint, &mark_x, &mark_y);
+    }
+
+    // VisualMetaFont
+    if (buffer->info[glyph_pos].lefttatweel != 0 ||
+	buffer->info[glyph_pos].righttatweel != 0)
+    {
+      hb_cursive_anchor_context_t anchor_context;
+      anchor_context.glyph_id = buffer->cur ().codepoint;
+      anchor_context.base_glyph_id = buffer->info[glyph_pos].codepoint;
+      anchor_context.lookup_index = c->lookup_index;
+      anchor_context.subtable_index = c->subtable_index;
+      anchor_context.lefttatweel = buffer->info[glyph_pos].lefttatweel;
+      anchor_context.righttatweel = buffer->info[glyph_pos].righttatweel;
+      anchor_context.type = hb_cursive_anchor_context_t::base;
+      hb_position_t xCoordinate;
+      hb_position_t yCoordinate;
+      c->font->get_cursive_anchor (&anchor_context, &xCoordinate, &yCoordinate);
+      base_x = c->font->em_fscale_x (xCoordinate);
+      base_y = c->font->em_fscale_y (yCoordinate);
+    }
+    else
+    {
+      glyph_anchor.get_anchor (c, buffer->info[glyph_pos].codepoint, &base_x, &base_y);
+    }
 
     hb_glyph_position_t &o = buffer->cur_pos();
     o.x_offset = roundf (base_x - mark_x);
     o.y_offset = roundf (base_y - mark_y);
     o.attach_type() = ATTACH_TYPE_MARK;
     o.attach_chain() = (int) glyph_pos - (int) buffer->idx;
+    // VisualMetaFont
+    o.lookup_index = c->lookup_index;
+    o.subtable_index = c->subtable_index;
+    o.base_codepoint = buffer->info[glyph_pos].codepoint;
+
     buffer->scratch_flags |= HB_BUFFER_SCRATCH_FLAG_HAS_GPOS_ATTACHMENT;
 
     buffer->idx++;
@@ -690,6 +743,108 @@ struct SinglePosFormat2
   DEFINE_SIZE_ARRAY (8, values);
 };
 
+// Added for VisualMetaFont for coloring glyph
+
+struct SinglePosFormat3
+{
+  bool intersects (const hb_set_t *glyphs) const
+  {
+    return (this + coverage).intersects (glyphs);
+  }
+
+  void collect_glyphs (hb_collect_glyphs_context_t *c) const
+  {
+    if (unlikely (!(this + coverage).add_coverage (c->input))) return;
+  }
+
+  const Coverage &get_coverage () const { return this + coverage; }
+
+  bool apply (hb_ot_apply_context_t *c) const
+  {
+    TRACE_APPLY (this);
+    hb_buffer_t *buffer = c->buffer;
+    unsigned int index =
+	(this + coverage).get_coverage (buffer->cur ().codepoint);
+    if (likely (index == NOT_COVERED)) return_trace (false);
+
+    if (likely (index >= valueCount)) return_trace (false);
+
+    /*valueFormat.apply_value (c, this, &values[index * valueFormat.get_len ()],
+			     buffer->cur_pos ());*/
+    const Value *mvalues = &values[index * valueFormat.get_len ()];
+
+    auto p1 = *reinterpret_cast<const HBINT16 *> (mvalues++);
+    auto p2 = *reinterpret_cast<const HBINT16 *> (mvalues++);
+    auto p3 = *reinterpret_cast<const HBINT16 *> (mvalues++);
+    auto p4 = *reinterpret_cast<const HBINT16 *> (mvalues);
+
+    buffer->cur_pos ().base_codepoint =
+	(p1 << 24) + (p2 << 16) + (p3 << 8) + p4;
+    buffer->cur_pos ().lookup_index = c->lookup_index;
+    buffer->cur_pos ().subtable_index = c->subtable_index;
+    
+
+    buffer->idx++;
+    return_trace (true);
+  }
+
+  template <typename Iterator, hb_requires (hb_is_iterator (Iterator))>
+  void serialize (hb_serialize_context_t *c, Iterator it, ValueFormat valFormat)
+  {
+    if (unlikely (!c->extend_min (*this))) return;
+    if (unlikely (!c->check_assign (valueFormat, valFormat))) return;
+    if (unlikely (!c->check_assign (valueCount, it.len ()))) return;
+
+    for (auto iter : it) c->copy_all (iter.second);
+
+    auto glyphs = +it | hb_map_retains_sorting (hb_first);
+
+    coverage.serialize (c, this).serialize (c, glyphs);
+  }
+
+  bool subset (hb_subset_context_t *c) const
+  {
+    TRACE_SUBSET (this);
+    const hb_set_t &glyphset = *c->plan->glyphset ();
+    const hb_map_t &glyph_map = *c->plan->glyph_map;
+
+    unsigned sub_length = valueFormat.get_len ();
+    auto values_array = values.as_array (valueCount * sub_length);
+
+    auto it = +hb_zip (this + coverage, hb_range ((unsigned) valueCount)) |
+	      hb_filter (glyphset, hb_first) |
+	      hb_map_retains_sorting (
+		  [&] (const hb_pair_t<hb_codepoint_t, unsigned> &_) {
+		    return hb_pair (glyph_map[_.first],
+				    values_array.sub_array (
+					_.second * sub_length, sub_length));
+		  });
+
+    bool ret = bool (it);
+    SinglePos_serialize (c->serializer, it, valueFormat);
+    return_trace (ret);
+  }
+
+  bool sanitize (hb_sanitize_context_t *c) const
+  {
+    TRACE_SANITIZE (this);
+    return_trace (c->check_struct (this) && coverage.sanitize (c, this) &&
+		  valueFormat.sanitize_values (c, this, values, valueCount));
+  }
+
+  protected:
+  HBUINT16 format;	       /* Format identifier--format = 2 */
+  OffsetTo<Coverage> coverage; /* Offset to Coverage table--from
+				* beginning of subtable */
+  ValueFormat valueFormat;     /* Defines the types of data in the
+				* ValueRecord */
+  HBUINT16 valueCount;	       /* Number of ValueRecords */
+  ValueRecord values;	       /* Array of ValueRecords--positioning
+				* values applied to glyphs */
+  public:
+  DEFINE_SIZE_ARRAY (8, values);
+};
+
 struct SinglePos
 {
   template<typename Iterator,
@@ -736,6 +891,8 @@ struct SinglePos
     switch (u.format) {
     case 1: return_trace (c->dispatch (u.format1, hb_forward<Ts> (ds)...));
     case 2: return_trace (c->dispatch (u.format2, hb_forward<Ts> (ds)...));
+    // VisualMetaFont
+    case 3: return_trace (c->dispatch (u.format3, hb_forward<Ts> (ds)...));
     default:return_trace (c->default_return_value ());
     }
   }
@@ -745,6 +902,8 @@ struct SinglePos
   HBUINT16		format;		/* Format identifier */
   SinglePosFormat1	format1;
   SinglePosFormat2	format2;
+  // VisualMetaFont
+    SinglePosFormat3 format3;
   } u;
 };
 
@@ -1264,8 +1423,47 @@ struct CursivePosFormat1
 
     buffer->unsafe_to_break (i, j);
     float entry_x, entry_y, exit_x, exit_y;
-    (this+prev_record.exitAnchor).get_anchor (c, buffer->info[i].codepoint, &exit_x, &exit_y);
-    (this+this_record.entryAnchor).get_anchor (c, buffer->info[j].codepoint, &entry_x, &entry_y);
+    
+    // VisualMetaFont    
+    if (buffer->info[i].lefttatweel != 0 || buffer->info[i].righttatweel != 0)
+    {
+      hb_cursive_anchor_context_t anchor_context;
+      anchor_context.glyph_id = buffer->info[i].codepoint;
+      anchor_context.lookup_index = c->lookup_index;
+      anchor_context.subtable_index = c->subtable_index;
+      anchor_context.lefttatweel = buffer->info[i].lefttatweel;
+      anchor_context.righttatweel = buffer->info[i].righttatweel;
+      anchor_context.type = hb_cursive_anchor_context_t::exit;
+      hb_position_t xCoordinate;
+      hb_position_t yCoordinate;
+      c->font->get_cursive_anchor (&anchor_context, &xCoordinate, &yCoordinate);
+      exit_x = c->font->em_fscale_x (xCoordinate);
+      exit_y = c->font->em_fscale_y (yCoordinate);
+    }
+    else
+    {
+      (this + prev_record.exitAnchor).get_anchor (c, buffer->info[i].codepoint, &exit_x, &exit_y);
+    }
+
+    if (buffer->info[j].lefttatweel != 0 || buffer->info[j].righttatweel != 0)
+    {
+      hb_cursive_anchor_context_t anchor_context;
+      anchor_context.glyph_id = buffer->info[j].codepoint;
+      anchor_context.lookup_index = c->lookup_index;
+      anchor_context.subtable_index = c->subtable_index;
+      anchor_context.lefttatweel = buffer->info[j].lefttatweel;
+      anchor_context.righttatweel = buffer->info[j].righttatweel;
+      anchor_context.type = hb_cursive_anchor_context_t::entry;
+      hb_position_t xCoordinate;
+      hb_position_t yCoordinate;
+      c->font->get_cursive_anchor (&anchor_context, &xCoordinate, &yCoordinate);
+      entry_x = c->font->em_fscale_x (xCoordinate);
+      entry_y = c->font->em_fscale_y (yCoordinate);
+    }
+    else
+    {
+      (this + this_record.entryAnchor).get_anchor (c, buffer->info[j].codepoint, &entry_x, &entry_y);
+    }
 
     hb_glyph_position_t *pos = buffer->pos;
 
@@ -1342,6 +1540,12 @@ struct CursivePosFormat1
       pos[child].x_offset = x_offset;
 
     buffer->idx++;
+    
+    // VisualMetaFont
+    pos[child].lookup_index = c->lookup_index;
+    pos[child].subtable_index = c->subtable_index;
+    pos[child].base_codepoint = buffer->info[parent].codepoint;
+    
     return_trace (true);
   }
 
@@ -2066,7 +2270,6 @@ template <typename context_t>
   return ret;
 }
 #endif
-
 
 } /* namespace OT */
 
