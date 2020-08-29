@@ -1542,9 +1542,9 @@ struct CursivePosFormat1
     buffer->idx++;
     
     // VisualMetaFont
-    pos[child].lookup_index = c->lookup_index;
-    pos[child].subtable_index = c->subtable_index;
-    pos[child].base_codepoint = buffer->info[parent].codepoint;
+    pos[j].lookup_index = c->lookup_index;
+    pos[j].subtable_index = c->subtable_index;
+    pos[j].base_codepoint = buffer->info[i].codepoint;
     
     return_trace (true);
   }
