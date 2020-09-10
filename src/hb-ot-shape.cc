@@ -836,7 +836,11 @@ hb_ot_substitute_default (const hb_ot_shape_context_t *c)
 
   HB_BUFFER_ALLOCATE_VAR (buffer, glyph_index);
 
-  _hb_ot_shape_normalize (c->plan, buffer, c->font);
+
+  //VisualMetaFont (For justification)
+  if(buffer->content_type != HB_BUFFER_CONTENT_TYPE_GLYPHS){
+    _hb_ot_shape_normalize (c->plan, buffer, c->font);
+  }
 
   hb_ot_shape_setup_masks (c);
 
@@ -844,7 +848,11 @@ hb_ot_substitute_default (const hb_ot_shape_context_t *c)
   if (c->plan->fallback_mark_positioning)
     _hb_ot_shape_fallback_mark_position_recategorize_marks (c->plan, c->font, buffer);
 
-  hb_ot_map_glyphs_fast (buffer);
+  //VisualMetaFont (For justification)
+  if(buffer->content_type != HB_BUFFER_CONTENT_TYPE_GLYPHS){
+    hb_ot_map_glyphs_fast (buffer);
+  }
+
 
   HB_BUFFER_DEALLOCATE_VAR (buffer, glyph_index);
 }
