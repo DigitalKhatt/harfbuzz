@@ -1998,6 +1998,8 @@ struct ContextPos : Context {};
 
 struct ChainContextPos : ChainContext {};
 
+struct FSMPos : FSM {};
+
 struct ExtensionPos : Extension<ExtensionPos>
 {
   typedef struct PosLookupSubTable SubTable;
@@ -2024,7 +2026,8 @@ struct PosLookupSubTable
     MarkMark		= 6,
     Context		= 7,
     ChainContext	= 8,
-    Extension		= 9
+    Extension		= 9,
+    FSM			= 20,
   };
 
   template <typename context_t, typename ...Ts>
@@ -2041,6 +2044,7 @@ struct PosLookupSubTable
     case Context:		return_trace (u.context.dispatch (c, hb_forward<Ts> (ds)...));
     case ChainContext:		return_trace (u.chainContext.dispatch (c, hb_forward<Ts> (ds)...));
     case Extension:		return_trace (u.extension.dispatch (c, hb_forward<Ts> (ds)...));
+    case FSM:			return_trace (u.fsmPos.dispatch (c, hb_forward<Ts> (ds)...));
     default:			return_trace (c->default_return_value ());
     }
   }
@@ -2056,6 +2060,7 @@ struct PosLookupSubTable
   ContextPos		context;
   ChainContextPos	chainContext;
   ExtensionPos		extension;
+  FSMPos		fsmPos;
   } u;
   public:
   DEFINE_SIZE_MIN (0);

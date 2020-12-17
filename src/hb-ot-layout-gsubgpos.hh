@@ -3029,6 +3029,79 @@ struct GSUBGPOS
   DEFINE_SIZE_MIN (10);
 };
 
+struct FSMFormat1
+{
+  bool intersects (const hb_set_t *glyphs) const
+  {
+    
+  }
+
+  void closure (hb_closure_context_t *c) const
+  {
+    
+  }
+
+  void collect_glyphs (hb_collect_glyphs_context_t *c) const
+  {
+    
+  }
+
+  bool would_apply (hb_would_apply_context_t *c) const
+  {
+    return true;
+  }
+
+  const Coverage &get_coverage () const
+  {    
+    return coverage;
+  }
+
+  bool apply (hb_ot_apply_context_t *c) const
+  {
+
+    c->font->get_apply_lookup (c);
+
+    return false;
+  }
+
+  bool subset (hb_subset_context_t *c) const
+  {
+    
+  }
+
+  bool sanitize (hb_sanitize_context_t *c) const
+  {
+    return true;
+  }
+
+  private:
+  Coverage coverage;
+};
+
+struct FSM
+{
+  template <typename context_t, typename... Ts>
+  typename context_t::return_t dispatch (context_t *c, Ts &&... ds) const
+  {
+    TRACE_DISPATCH (this, u.format);
+    if (unlikely (!c->may_dispatch (this, &u.format)))
+      return_trace (c->no_dispatch_return_value ());
+    switch (u.format)
+    {
+    case 1: return_trace (c->dispatch (u.format1, hb_forward<Ts> (ds)...));
+    default: return_trace (c->default_return_value ());
+    }
+  }
+
+  protected:
+  union
+  {
+    HBUINT16 format; /* Format identifier */
+    FSMFormat1 format1;
+  } u;
+};
+
+
 
 } /* namespace OT */
 

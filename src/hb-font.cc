@@ -497,6 +497,17 @@ hb_font_get_substitution_default (hb_font_t *font,
   return false;
 }
 
+#define hb_font_get_apply_lookup_nil hb_font_get_apply_lookup_default
+static hb_bool_t
+hb_font_get_apply_lookup_default (hb_font_t *font,
+				  void *font_data,
+				  OT::hb_ot_apply_context_t *c,
+				  void *user_data)
+{
+
+  return false;
+}
+
 DEFINE_NULL_INSTANCE (hb_font_funcs_t) =
 {
   HB_OBJECT_HEADER_STATIC,

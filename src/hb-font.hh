@@ -60,6 +60,7 @@
   HB_FONT_FUNC_IMPLEMENT (glyph_from_name) \
   HB_FONT_FUNC_IMPLEMENT (cursive_anchor) \
   HB_FONT_FUNC_IMPLEMENT (substitution) \
+  HB_FONT_FUNC_IMPLEMENT (apply_lookup) \
   /* ^--- Add new callbacks here */
 
 struct hb_font_funcs_t
@@ -387,6 +388,13 @@ struct hb_font_t
   {
 
     return klass->get.f.substitution(this, user_data, context,klass->user_data.substitution);
+  }
+
+   hb_bool_t get_apply_lookup (OT::hb_ot_apply_context_t *c)
+  {
+
+    return klass->get.f.apply_lookup (this, user_data, c,
+				      klass->user_data.apply_lookup);
   }
 
 
