@@ -240,6 +240,27 @@ struct SingleSubstFormat2
 };
 
 // Added for VisualMetaFont
+struct JustParams
+{
+  bool sanitize (hb_sanitize_context_t *c) const
+  {
+    TRACE_SANITIZE (this);
+    return_trace (likely (c->check_struct (this)));
+  }
+
+  HBGlyphID substitute;
+  HBFixed minLeftTatweel;
+  HBFixed maxLeftTatweel;
+  HBFixed minRightTatweel;
+  HBFixed maxRightTatweel;
+  HBUINT16 weight;
+  HBUINT32 flags;
+
+  public:
+  DEFINE_SIZE_STATIC (24);
+};
+
+// Added for VisualMetaFont
 struct SingleSubstFormat10
 {
   bool intersects (const hb_set_t *glyphs) const
@@ -249,15 +270,17 @@ struct SingleSubstFormat10
 
   void closure (hb_closure_context_t *c) const
   {
+    /*
     +hb_zip (this + coverage, substitute) | hb_filter (*c->glyphs, hb_first) |
-	hb_map (hb_second) | hb_sink (c->output);
+	hb_map (hb_second) | hb_sink (c->output);*/
   }
 
   void collect_glyphs (hb_collect_glyphs_context_t *c) const
   {
+    /*
     if (unlikely (!(this + coverage).add_coverage (c->input))) return;
     +hb_zip (this + coverage, substitute) | hb_map (hb_second) |
-	hb_sink (c->output);
+	hb_sink (c->output);*/
   }
 
   const Coverage &get_coverage () const { return this + coverage; }
@@ -281,15 +304,36 @@ struct SingleSubstFormat10
     //c->replace_glyph (substitute[index]);
 
     //return_trace (true);
+#ifndef HB_NO_JUSTIFICATION
+    if (c->buffer->justContext != nullptr) {
+      OT::JustificationContext &justContext = *c->buffer->justContext;
+      justContext.GlyphsToExtend.push_back (c->buffer->idx);
+      justContext.Substitutes.push_back (substitute[index].substitute);
+
+      OT::GlyphExpansion expa;
+
+      expa.MinLeftTatweel = substitute[index].minLeftTatweel.to_float();
+      expa.MaxLeftTatweel = substitute[index].maxLeftTatweel.to_float ();
+      expa.MinRightTatweel = substitute[index].minRightTatweel.to_float ();
+      expa.MaxRightTatweel = substitute[index].maxRightTatweel.to_float ();
+      expa.weight = substitute[index].weight;
+      expa.startEndLig = (StartEndLig) (substitute[index].flags & 7);
+      expa.stretchIsAbsolute = substitute[index].flags & 8;
+      expa.shrinkIsAbsolute = substitute[index].flags & 16;
+
+      justContext.Expansions.insert ({c->buffer->idx, expa});
+      justContext.totalWeight += expa.weight;
+    }    
+#endif
 
     hb_substitution_context_t substitution_context;
 
     substitution_context.ot_context = c;
-    substitution_context.substitute = substitute[index];
+    substitution_context.substitute = substitute[index].substitute;
 
     auto result = c->font->get_substitution (&substitution_context);
 
-    if (result) c->replace_glyph (substitute[index]);
+    if (result) c->replace_glyph (substitute[index].substitute);
 
     return_trace (result);
 
@@ -300,18 +344,20 @@ struct SingleSubstFormat10
 						 hb_codepoint_pair_t))>
   bool serialize (hb_serialize_context_t *c, Iterator it)
   {
+    /*
     TRACE_SERIALIZE (this);
     auto substitutes = +it | hb_map (hb_second);
     auto glyphs = +it | hb_map_retains_sorting (hb_first);
     if (unlikely (!c->extend_min (*this))) return_trace (false);
     if (unlikely (!substitute.serialize (c, substitutes))) return_trace (false);
     if (unlikely (!coverage.serialize (c, this).serialize (c, glyphs)))
-      return_trace (false);
-    return_trace (true);
+      return_trace (false);*/
+    return true;
   }
 
   bool subset (hb_subset_context_t *c) const
   {
+    /*
     TRACE_SUBSET (this);
     const hb_set_t &glyphset = *c->plan->glyphset_gsub ();
     const hb_map_t &glyph_map = *c->plan->glyph_map;
@@ -326,7 +372,8 @@ struct SingleSubstFormat10
 
     bool ret = bool (it);
     SingleSubst_serialize (c->serializer, it);
-    return_trace (ret);
+    return_trace (ret);*/
+    return true;
   }
 
   bool sanitize (hb_sanitize_context_t *c) const
@@ -339,7 +386,7 @@ struct SingleSubstFormat10
   HBUINT16 format;		 /* Format identifier--format = 2 */
   OffsetTo<Coverage> coverage;	 /* Offset to Coverage table--from
 				  * beginning of Substitution table */
-  ArrayOf<HBGlyphID> substitute; /* Array of substitute
+  ArrayOf<JustParams> substitute; /* Array of substitute
 				  * GlyphIDs--ordered by Coverage Index */
   public:
   DEFINE_SIZE_ARRAY (6, substitute);
@@ -353,12 +400,13 @@ struct AdjustTatweel
     TRACE_SANITIZE (this);
     return_trace (likely (c->check_struct (this)));
   }
-  
+
+  HBGlyphID substitute;
   HBFixed leftTatweel;
   HBFixed rightTatweel;
 
   public:
-  DEFINE_SIZE_STATIC (8);
+  DEFINE_SIZE_STATIC (10);
 };
 
 // Added for VisualMetaFont (substitute with expansion)
@@ -403,12 +451,12 @@ struct SingleSubstFormat11
 
     auto tat = tatweel[index];
 
-    auto& info = c->buffer->cur ();
+    auto& info = c->buffer->cur ();    
 
     info.lefttatweel += tat.leftTatweel.to_float ();
     info.righttatweel += tat.rightTatweel.to_float ();
 
-    //c->replace_glyph (info.codepoint);
+    c->replace_glyph (tat.substitute);
 
     return_trace (true);
   }

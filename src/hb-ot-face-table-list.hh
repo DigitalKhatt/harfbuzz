@@ -101,6 +101,10 @@ HB_OT_ACCELERATOR (OT, GPOS)
 //HB_OT_TABLE (OT, JSTF)
 #endif
 
+#ifndef HB_NO_JUSTIFICATION
+HB_OT_TABLE (OT, JTST)
+#endif
+
 /* OpenType baseline. */
 #ifndef HB_NO_BASE
 HB_OT_TABLE (OT, BASE)

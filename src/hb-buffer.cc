@@ -679,6 +679,12 @@ DEFINE_NULL_INSTANCE (hb_buffer_t) =
 
   HB_BUFFER_CONTENT_TYPE_INVALID,
   HB_SEGMENT_PROPERTIES_DEFAULT,
+#ifndef HB_NO_JUSTIFICATION
+  false,
+  false,
+  0.0,
+  nullptr,
+#endif
   false, /* successful */
   true, /* have_output */
   true  /* have_positions */
