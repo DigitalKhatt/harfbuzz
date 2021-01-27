@@ -22,9 +22,6 @@
 
 #include "hb-open-type.hh"
 #include "hb-ot-layout-gpos-table.hh"
-#include <unordered_map>
-#include <map>
-#include <vector>
 
 
 #define HB_OT_TAG_JTST HB_TAG ('J', 'T', 'S', 'T')

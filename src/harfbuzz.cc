@@ -46,6 +46,7 @@
 #include "hb-style.cc"
 #include "hb-ucd.cc"
 #include "hb-unicode.cc"
+#include "hb-ot-layout-jtst-context.cc"
 #include "hb-glib.cc"
 #include "hb-ft.cc"
 #include "hb-graphite2.cc"
@@ -53,4 +54,3 @@
 #include "hb-gdi.cc"
 #include "hb-directwrite.cc"
 #include "hb-coretext.cc"
-#include "hb-ot-layout-jtst-context.cc"
