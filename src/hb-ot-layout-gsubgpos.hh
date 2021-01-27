@@ -3450,7 +3450,7 @@ struct FSMFormat1
 
   bool intersects (const hb_set_t *glyphs) const
   {
-    
+    return true;
   }
 
   void closure (hb_closure_context_t *c) const
@@ -3483,7 +3483,7 @@ struct FSMFormat1
 
   bool subset (hb_subset_context_t *c) const
   {
-    
+    return true;
   }
 
   bool sanitize (hb_sanitize_context_t *c) const
