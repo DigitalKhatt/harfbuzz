@@ -110,11 +110,33 @@ hb_ot_get_glyph_h_advances (hb_font_t* font, void* font_data,
   const hb_ot_face_t *ot_face = (const hb_ot_face_t *) font_data;
   const OT::hmtx_accelerator_t &hmtx = *ot_face->hmtx;
 
+#ifndef HB_NO_JUSTIFICATION
+  auto infos = (hb_glyph_info_t *) (first_glyph);
+  auto positions = (hb_glyph_position_t *) (first_advance);
+#endif
   for (unsigned int i = 0; i < count; i++)
   {
+#ifndef HB_NO_JUSTIFICATION
+    if (infos[i].lefttatweel != 0.0 || infos[i].righttatweel != 0.0)
+    {
+      int coords[2];
+      coords[0] = roundf (infos[i].lefttatweel * 16384.f);
+      coords[1] = roundf (infos[i].righttatweel * 16384.f);
+      font->num_coords = 2;
+      font->coords = &coords[0];
+      positions[i].x_advance = font->em_scale_x (hmtx.get_advance (infos[i].codepoint, font));
+      font->num_coords = 0;
+      font->coords = nullptr;
+    }
+    else
+    {
+      positions[i].x_advance = font->em_scale_x (hmtx.get_advance (infos[i].codepoint, font));
+    }
+#else
     *first_advance = font->em_scale_x (hmtx.get_advance (*first_glyph, font));
     first_glyph = &StructAtOffsetUnaligned<hb_codepoint_t> (first_glyph, glyph_stride);
     first_advance = &StructAtOffsetUnaligned<hb_position_t> (first_advance, advance_stride);
+#endif
   }
 }
 
@@ -306,6 +328,9 @@ _hb_ot_get_font_funcs ()
 
 /**
  * hb_ot_font_set_funcs:
+ * @font: #hb_font_t to work upon
+ *
+ * Sets the font functions to use when working with @font. 
  *
  * Since: 0.9.28
  **/

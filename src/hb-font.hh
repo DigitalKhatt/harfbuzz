@@ -39,6 +39,69 @@
  * hb_font_funcs_t
  */
 
+
+/* Added for VisualMetaFont */
+
+typedef struct hb_cursive_anchor_context_t
+{
+  enum Type { entry, exit, mark, base };
+  hb_codepoint_t glyph_id;
+  hb_codepoint_t base_glyph_id;
+  double lefttatweel;
+  double righttatweel;
+  unsigned int lookup_index;
+  unsigned int subtable_index;
+  Type type;
+} hb_cursive_anchor_context_t;
+
+typedef hb_bool_t (*hb_font_get_cursive_anchor_func_t) (
+    hb_font_t *font,
+    void *font_data,
+    hb_cursive_anchor_context_t *context,
+    hb_position_t *x,
+    hb_position_t *y,
+    void *user_data);
+
+namespace OT {
+struct hb_ot_apply_context_t;
+}
+
+typedef struct hb_substitution_context_t
+{
+  OT::hb_ot_apply_context_t *ot_context;
+  unsigned int substitute;
+} hb_substitution_context_t;
+
+typedef hb_bool_t (*hb_font_get_substitution_func_t) (
+    hb_font_t *font,
+    void *font_data,
+    hb_substitution_context_t *context,
+    void *user_data);
+
+typedef hb_bool_t (*hb_font_get_apply_lookup_func_t) (
+    hb_font_t *font,
+    void *font_data,
+    OT::hb_ot_apply_context_t *c,
+    void *user_data);
+
+
+HB_EXTERN void
+hb_font_funcs_set_substitution_func (hb_font_funcs_t *ffuncs,
+				     hb_font_get_substitution_func_t func,
+				     void *user_data,
+				     hb_destroy_func_t destroy);
+
+HB_EXTERN void
+hb_font_funcs_set_apply_lookup_func (hb_font_funcs_t *ffuncs,
+				     hb_font_get_apply_lookup_func_t func,
+				     void *user_data,
+				     hb_destroy_func_t destroy);
+HB_EXTERN void
+hb_font_funcs_set_cursive_anchor_func (hb_font_funcs_t *ffuncs,
+				       hb_font_get_cursive_anchor_func_t func,
+				       void *user_data,
+				       hb_destroy_func_t destroy);
+
 //added cursive_anchor and substitution for VisualMetaFont
 #define HB_FONT_FUNCS_IMPLEMENT_CALLBACKS \
   HB_FONT_FUNC_IMPLEMENT (font_h_extents) \
@@ -124,6 +187,7 @@ struct hb_font_t
   /* Font variation coordinates. */
   unsigned int num_coords;
   int *coords;
+  float *design_coords;
 
   hb_font_funcs_t   *klass;
   void              *user_data;
@@ -290,7 +354,7 @@ struct hb_font_t
   }
 
   hb_bool_t get_glyph_h_origin (hb_codepoint_t glyph,
-			        hb_position_t *x, hb_position_t *y)
+				hb_position_t *x, hb_position_t *y)
   {
     *x = *y = 0;
     return klass->get.f.glyph_h_origin (this, user_data,
@@ -342,7 +406,7 @@ struct hb_font_t
   }
 
   hb_bool_t get_glyph_contour_point (hb_codepoint_t glyph, unsigned int point_index,
-					    hb_position_t *x, hb_position_t *y)
+				     hb_position_t *x, hb_position_t *y)
   {
     *x = *y = 0;
     return klass->get.f.glyph_contour_point (this, user_data,

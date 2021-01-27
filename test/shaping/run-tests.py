@@ -1,12 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-from __future__ import print_function, division, absolute_import
-
-import sys, os, subprocess, hashlib, tempfile, shutil
+import sys, os, subprocess, hashlib
 
 def cmd(command):
+	print (command)
 	global process
-	process.stdin.write ((' '.join (command) + '\n').encode ("utf-8"))
+	process.stdin.write ((':'.join (command) + '\n').encode ("utf-8"))
 	process.stdin.flush ()
 	return process.stdout.readline().decode ("utf-8").strip ()
 
@@ -17,9 +16,10 @@ if len (args) and args[0] == "--reference":
 	reference = True
 	args = args[1:]
 
+have_freetype = bool(int(os.getenv ('HAVE_FREETYPE', '1')))
+
 if not args or args[0].find('hb-shape') == -1 or not os.path.exists (args[0]):
-	print ("""First argument does not seem to point to usable hb-shape.""")
-	sys.exit (1)
+	sys.exit ("""First argument does not seem to point to usable hb-shape.""")
 hb_shape, args = args[0], args[1:]
 
 process = subprocess.Popen ([hb_shape, '--batch'],
@@ -44,7 +44,7 @@ for filename in args:
 	if filename == '-':
 		f = sys.stdin
 	else:
-		f = open (filename)
+		f = open (filename, encoding='utf8')
 
 	for line in f:
 		comment = False
@@ -62,7 +62,11 @@ for filename in args:
 			continue
 
 		fontfile, options, unicodes, glyphs_expected = line.split (":")
+		options = options.split ()
 		if fontfile.startswith ('/') or fontfile.startswith ('"/'):
+			if os.name == 'nt': # Skip on Windows
+				continue
+
 			fontfile, expected_hash = fontfile.split('@')
 
 			try:
@@ -94,40 +98,36 @@ for filename in args:
 			print ('%s "%s" %s %s --unicodes %s' %
 					 (hb_shape, fontfile, ' '.join(extra_options), options, unicodes))
 
-		# hack to support fonts with space on run-tests.py, after several other tries...
-		if ' ' in fontfile:
-			new_fontfile = os.path.join (tempfile.gettempdir (), 'tmpfile')
-			shutil.copyfile(fontfile, new_fontfile)
-			fontfile = new_fontfile
+		if "--font-funcs=ft" in options and not have_freetype:
+			skips += 1
+			continue
 
-		glyphs1 = cmd ([hb_shape, "--font-funcs=ft",
-			fontfile] + extra_options + ["--unicodes",
-			unicodes] + (options.split (' ') if options else []))
-
-		glyphs2 = cmd ([hb_shape, "--font-funcs=ot",
-			fontfile] + extra_options + ["--unicodes",
-			unicodes] + (options.split (' ') if options else []))
-
-		if glyphs1 != glyphs2 and glyphs_expected != '*':
-			print ("FT funcs: " + glyphs1) # file=sys.stderr
-			print ("OT funcs: " + glyphs2) # file=sys.stderr
-			fails += 1
+		if "--font-funcs=ot" in options or not have_freetype:
+			glyphs1 = cmd ([hb_shape, fontfile, "--font-funcs=ot"] + extra_options + ["--unicodes", unicodes] + options)
 		else:
-			passes += 1
+			glyphs1 = cmd ([hb_shape, fontfile, "--font-funcs=ft"] + extra_options + ["--unicodes", unicodes] + options)
+			glyphs2 = cmd ([hb_shape, fontfile, "--font-funcs=ot"] + extra_options + ["--unicodes", unicodes] + options)
+
+			if glyphs1 != glyphs2 and glyphs_expected != '*':
+				print ("FT funcs: " + glyphs1, file=sys.stderr)
+				print ("OT funcs: " + glyphs2, file=sys.stderr)
+				fails += 1
+			else:
+				passes += 1
 
 		if reference:
-			print (":".join ([fontfile, options, unicodes, glyphs1]))
+			print (":".join ([fontfile, " ".join(options), unicodes, glyphs1]))
 			continue
 
 		if glyphs1.strip() != glyphs_expected and glyphs_expected != '*':
-			print ("Actual:   " + glyphs1) # file=sys.stderr
-			print ("Expected: " + glyphs_expected) # file=sys.stderr
+			print ("Actual:   " + glyphs1, file=sys.stderr)
+			print ("Expected: " + glyphs_expected, file=sys.stderr)
 			fails += 1
 		else:
 			passes += 1
 
 if not reference:
-	print ("%d tests passed; %d failed; %d skipped." % (passes, fails, skips)) # file=sys.stderr
+	print ("%d tests passed; %d failed; %d skipped." % (passes, fails, skips), file=sys.stderr)
 	if not (fails + passes):
 		print ("No tests ran.")
 	elif not (fails + skips):

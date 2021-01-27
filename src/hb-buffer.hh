@@ -37,10 +37,10 @@
 #endif
 
 #ifndef HB_BUFFER_MAX_LEN_FACTOR
-#define HB_BUFFER_MAX_LEN_FACTOR 32
+#define HB_BUFFER_MAX_LEN_FACTOR 64
 #endif
 #ifndef HB_BUFFER_MAX_LEN_MIN
-#define HB_BUFFER_MAX_LEN_MIN 8192
+#define HB_BUFFER_MAX_LEN_MIN 16384
 #endif
 #ifndef HB_BUFFER_MAX_LEN_DEFAULT
 #define HB_BUFFER_MAX_LEN_DEFAULT \
@@ -48,10 +48,10 @@
 #endif
 
 #ifndef HB_BUFFER_MAX_OPS_FACTOR
-#define HB_BUFFER_MAX_OPS_FACTOR 64
+#define HB_BUFFER_MAX_OPS_FACTOR 1024
 #endif
 #ifndef HB_BUFFER_MAX_OPS_MIN
-#define HB_BUFFER_MAX_OPS_MIN 1024
+#define HB_BUFFER_MAX_OPS_MIN 16384
 #endif
 #ifndef HB_BUFFER_MAX_OPS_DEFAULT
 #define HB_BUFFER_MAX_OPS_DEFAULT \
@@ -109,7 +109,7 @@ struct hb_buffer_t
 #ifndef HB_NO_JUSTIFICATION
   /*enable line justification during shaping*/
   bool justifyLine;
-  bool useAnchroVar;
+  bool useCallback;
   int lineWidth;
   OT::JustificationContext* justContext;
 #endif
@@ -245,7 +245,8 @@ struct hb_buffer_t
   {
     if (unlikely (!make_room_for (0, 1))) return Crap (hb_glyph_info_t);
 
-    if (unlikely (idx == len && !out_len)) return Crap (hb_glyph_info_t);
+    if (unlikely (idx == len && !out_len))
+      return Crap (hb_glyph_info_t);
 
     out_info[out_len] = idx < len ? info[idx] : out_info[out_len - 1];
     out_info[out_len].codepoint = glyph_index;
@@ -328,7 +329,8 @@ struct hb_buffer_t
   /* Merge clusters for deleting current glyph, and skip it. */
   HB_INTERNAL void delete_glyph ();
 
-  void unsafe_to_break (unsigned int start, unsigned int end)
+  void unsafe_to_break (unsigned int start,
+			unsigned int end)
   {
     if (end - start < 2) return;
     unsafe_to_break_impl (start, end);
@@ -350,6 +352,39 @@ struct hb_buffer_t
   bool ensure_inplace (unsigned int size)
   {
     return likely (!size || size < allocated);
+  }
+
+  void assert_glyphs ()
+  {
+    assert ((content_type == HB_BUFFER_CONTENT_TYPE_GLYPHS) ||
+	    (!len && (content_type == HB_BUFFER_CONTENT_TYPE_INVALID)));
+  }
+  void assert_unicode ()
+  {
+    assert ((content_type == HB_BUFFER_CONTENT_TYPE_UNICODE) ||
+	    (!len && (content_type == HB_BUFFER_CONTENT_TYPE_INVALID)));
+  }
+  bool ensure_glyphs ()
+  {
+    if (unlikely (content_type != HB_BUFFER_CONTENT_TYPE_GLYPHS))
+    {
+      if (content_type != HB_BUFFER_CONTENT_TYPE_INVALID)
+	return false;
+      assert (len == 0);
+      content_type = HB_BUFFER_CONTENT_TYPE_GLYPHS;
+    }
+    return true;
+  }
+  bool ensure_unicode ()
+  {
+    if (unlikely (content_type != HB_BUFFER_CONTENT_TYPE_UNICODE))
+    {
+      if (content_type != HB_BUFFER_CONTENT_TYPE_INVALID)
+	return false;
+      assert (len == 0);
+      content_type = HB_BUFFER_CONTENT_TYPE_UNICODE;
+    }
+    return true;
   }
 
   HB_INTERNAL bool make_room_for (unsigned int num_in, unsigned int num_out);
@@ -403,10 +438,10 @@ struct hb_buffer_t
     inf.cluster = cluster;
   }
 
-  int _unsafe_to_break_find_min_cluster (const hb_glyph_info_t *infos,
-					 unsigned int start,
-					 unsigned int end,
-					 unsigned int cluster) const
+  unsigned int
+  _unsafe_to_break_find_min_cluster (const hb_glyph_info_t *infos,
+				     unsigned int start, unsigned int end,
+				     unsigned int cluster) const
   {
     for (unsigned int i = start; i < end; i++)
       cluster = hb_min (cluster, infos[i].cluster);

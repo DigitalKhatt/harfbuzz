@@ -51,6 +51,16 @@
 #include "hb-ot-layout-gsub-table.hh" 
 #endif
 
+#ifndef HB_NO_AAT_SHAPE
+static inline bool
+_hb_apply_morx (hb_face_t *face, const hb_segment_properties_t *props)
+{
+  /* https://github.com/harfbuzz/harfbuzz/issues/2124 */
+  return hb_aat_layout_has_substitution (face) &&
+	 (HB_DIRECTION_IS_HORIZONTAL (props->direction) || !hb_ot_layout_has_substitution (face));
+}
+#endif
+
 /**
  * SECTION:hb-ot-shape
  * @title: hb-ot-shape
@@ -68,8 +78,7 @@ hb_ot_shape_planner_t::hb_ot_shape_planner_t (
     hb_face_t *face, const hb_segment_properties_t *props)
     : face (face), props (*props), map (face, props), aat_map (face, props)
 #ifndef HB_NO_AAT_SHAPE
-      ,
-      apply_morx (hb_aat_layout_has_substitution (face))
+						, apply_morx (_hb_apply_morx (face, props))
 #endif
 {
   shaper = hb_ot_shape_complex_categorize (this);
@@ -207,7 +216,14 @@ hb_ot_shape_plan_t::init0 (hb_face_t *face, const hb_shape_plan_key_t *key)
   if (shaper->data_create)
   {
     data = shaper->data_create (this);
-    if (unlikely (!data)) return false;
+    if (unlikely (!data))
+    {
+      map.fini ();
+#ifndef HB_NO_AAT_SHAPE
+      aat_map.fini ();
+#endif
+      return false;
+    }
   }
 
   return true;
@@ -647,10 +663,8 @@ hb_ot_rotate_chars (const hb_ot_shape_context_t *c)
     for (unsigned int i = 0; i < count; i++)
     {
       hb_codepoint_t codepoint = hb_vert_char_for (info[i].codepoint);
-      if (c->font->has_glyph (codepoint))
-	if (unlikely (codepoint != info[i].codepoint &&
-		      c->font->has_glyph (codepoint)))
-	  info[i].codepoint = codepoint;
+      if (unlikely (codepoint != info[i].codepoint && c->font->has_glyph (codepoint)))
+	info[i].codepoint = codepoint;
     }
   }
 }
@@ -881,8 +895,11 @@ hb_ot_substitute_post (const hb_ot_shape_context_t *c)
   if (c->plan->apply_morx) hb_aat_layout_remove_deleted_glyphs (c->buffer);
 #endif
 
-  if (c->plan->shaper->postprocess_glyphs)
+  if (c->plan->shaper->postprocess_glyphs &&
+    c->buffer->message(c->font, "start postprocess-glyphs")) {
     c->plan->shaper->postprocess_glyphs (c->plan, c->buffer, c->font);
+    (void) c->buffer->message(c->font, "end postprocess-glyphs");
+  }
 }
 
 /*
@@ -1085,7 +1102,7 @@ hb_ot_justify_line (hb_ot_shape_context_t *c)
 
     auto &steps = isStretch ? c->font->face->table.JTST->get_stretch_steps ()
 			    : c->font->face->table.JTST->get_shrink_steps ();
-    int stepIndex = 0;
+    unsigned int stepIndex = 0;
     while (stepIndex < steps.len &&
 	   ((isStretch && diff > 0) || (!isStretch && diff < 0)))
     {
@@ -1166,8 +1183,11 @@ hb_ot_shape_internal (hb_ot_shape_context_t *c)
 
   hb_ensure_native_direction (c->buffer);
 
-  if (c->plan->shaper->preprocess_text)
+  if (c->plan->shaper->preprocess_text &&
+    c->buffer->message(c->font, "start preprocess-text")) {
     c->plan->shaper->preprocess_text (c->plan, c->buffer, c->font);
+    (void) c->buffer->message(c->font, "end preprocess-text");
+  }
 
   hb_ot_substitute_pre (c);
 
@@ -1206,6 +1226,12 @@ _hb_ot_shape (hb_shape_plan_t *shape_plan,
 
 /**
  * hb_ot_shape_plan_collect_lookups:
+ * @shape_plan: #hb_shape_plan_t to query
+ * @table_tag: GSUB or GPOS
+ * @lookup_indexes: (out): The #hb_set_t set of lookups returned
+ *
+ * Computes the complete set of GSUB or GPOS lookups that are applicable
+ * under a given @shape_plan. 
  *
  * Since: 0.9.7
  **/
@@ -1237,6 +1263,15 @@ add_char (hb_font_t *font,
 
 /**
  * hb_ot_shape_glyphs_closure:
+ * @font: #hb_font_t to work upon
+ * @buffer: The input buffer to compute from
+ * @features: (array length=num_features): The features enabled on the buffer
+ * @num_features: The number of features enabled on the buffer
+ * @glyphs: (out): The #hb_set_t set of glyphs comprising the transitive closure of the query
+ *
+ * Computes the transitive closure of glyphs needed for a specified
+ * input buffer under the given font and feature list. The closure is
+ * computed as a set, not as a list.
  *
  * Since: 0.9.2
  **/

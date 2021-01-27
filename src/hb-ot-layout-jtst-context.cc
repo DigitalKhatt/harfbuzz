@@ -23,7 +23,7 @@ JustificationContext::getWidth (hb_buffer_t *buffer)
 
   std::vector<int> spaces;
 
-  for (int i = 0; i < glyph_count; i++)
+  for (unsigned int i = 0; i < glyph_count; i++)
   {
     if (glyph_info[i].codepoint == 32)
     {
@@ -82,7 +82,7 @@ JustificationContext::justify (int &diff,
     remaining = false;
     remainingWidth = 0.0;
 
-    for (int i = 0; i < this->GlyphsToExtend.size (); i++)
+    for (unsigned int i = 0; i < this->GlyphsToExtend.size (); i++)
     {
 
       int index = this->GlyphsToExtend[i];
@@ -142,101 +142,107 @@ JustificationContext::justify (int &diff,
 	continue;
       }
 
-      if (groupExpa.weight == 0) goto next;
+      if (groupExpa.weight != 0) {
+	int widthDiff = newWidth - oldWidth;
 
-      int widthDiff = newWidth - oldWidth;
+	auto tatweel = expaUnit * groupExpa.weight + remainingWidth;
 
-      auto tatweel = expaUnit * groupExpa.weight + remainingWidth;
-
-      if ((stretch && widthDiff > tatweel) || (!stretch && widthDiff < tatweel))
-      {
-	totalWeight += groupExpa.weight;
-	remainingWidth = tatweel;
-      }
-      else
-      {
-
-	diff -= widthDiff;
-	tatweel -= widthDiff;
-
-	for (int i : group)
+	if ((stretch && widthDiff > tatweel) ||
+	    (!stretch && widthDiff < tatweel))
+	{
+	  totalWeight += groupExpa.weight;
+	  remainingWidth = tatweel;
+	}
+	else
 	{
 
-	  int index = this->GlyphsToExtend[i];
-	  GlyphExpansion &expa = this->Expansions[index];
+	  diff -= widthDiff;
+	  tatweel -= widthDiff;
 
-	  glyph_info[index].codepoint = this->Substitutes[i];
-
-	  if (stretch)
+	  for (int i : group)
 	  {
-	    expa.MaxLeftTatweel =
-		expa.MaxLeftTatweel > 0 ? expa.MaxLeftTatweel : 0;
-	    expa.MaxRightTatweel =
-		expa.MaxRightTatweel > 0 ? expa.MaxRightTatweel : 0;
 
-	    auto maxTatweel = expa.MaxLeftTatweel + expa.MaxRightTatweel;
-	    hb_position_t maxStretch = 0;
-	    if (maxTatweel != 0)
+	    int index = this->GlyphsToExtend[i];
+	    GlyphExpansion &expa = this->Expansions[index];
+
+	    glyph_info[index].codepoint = this->Substitutes[i];
+
+	    if (stretch)
 	    {
+	      expa.MaxLeftTatweel =
+		  expa.MaxLeftTatweel > 0 ? expa.MaxLeftTatweel : 0;
+	      expa.MaxRightTatweel =
+		  expa.MaxRightTatweel > 0 ? expa.MaxRightTatweel : 0;
 
-	      hb_position_t actualWidth = 0;
-	      hb_position_t maxWidth = 0;
-	      hb_glyph_info_t info;
-	      info.codepoint = glyph_info[index].codepoint;
-	      info.lefttatweel = glyph_info[index].lefttatweel;
-	      info.righttatweel = glyph_info[index].righttatweel;
-
-	      font->get_glyph_h_advances (1, &info.codepoint, sizeof (info),
-					  &actualWidth, 0);
-
-	      info.lefttatweel =
-		  glyph_info[index].lefttatweel + expa.MaxLeftTatweel;
-	      info.righttatweel =
-		  glyph_info[index].righttatweel + expa.MaxRightTatweel;
-
-	      font->get_glyph_h_advances (1, &info.codepoint, sizeof (info),
-					  &maxWidth, 0);
-
-	      maxStretch = maxWidth - actualWidth;
-	    }
-	    if (maxStretch != 0 ){
-
-	      double ratio = maxTatweel / maxStretch;
-
-	      // auto maxStretch = maxTatweel * nuqta;
-
-	      if (tatweel > maxStretch)
+	      auto maxTatweel = expa.MaxLeftTatweel + expa.MaxRightTatweel;
+	      hb_position_t maxStretch = 0;
+	      if (maxTatweel != 0)
 	      {
-		remainingWidth = tatweel - maxStretch;
-		tatweel = maxStretch;
+
+		hb_position_t actualWidth = 0;
+		hb_position_t maxWidth = 0;
+		hb_glyph_info_t info;
+		info.codepoint = glyph_info[index].codepoint;
+		info.lefttatweel = glyph_info[index].lefttatweel;
+		info.righttatweel = glyph_info[index].righttatweel;
+
+		font->get_glyph_h_advances (1, &info.codepoint, sizeof (info),
+					    &actualWidth, 0);
+
+		info.lefttatweel =
+		    glyph_info[index].lefttatweel + expa.MaxLeftTatweel;
+		info.righttatweel =
+		    glyph_info[index].righttatweel + expa.MaxRightTatweel;
+
+		font->get_glyph_h_advances (1, &info.codepoint, sizeof (info),
+					    &maxWidth, 0);
+
+		maxStretch = maxWidth - actualWidth;
 	      }
-	      else
+	      if (maxStretch != 0)
 	      {
-		remainingWidth = 0;
-	      }
 
-	      double leftTatweel =
-		  (tatweel * (expa.MaxLeftTatweel / maxTatweel)) * ratio;
-	      // / nuqta;
-	      double rightTatweel =
-		  (tatweel * (expa.MaxRightTatweel / maxTatweel)) * ratio;
-	      // / nuqta;
+		double ratio = maxTatweel / maxStretch;
 
-	      glyph_info[index].lefttatweel += leftTatweel;
-	      glyph_info[index].righttatweel += rightTatweel;
-	      /*
-	      if (std::isnan (glyph_info[index].lefttatweel) ||
-		  std::isnan (glyph_info[index].righttatweel))
-	      { int stop = 5; }*/
+		// auto maxStretch = maxTatweel * nuqta;
 
-	      diff -= tatweel;
+		if (tatweel > maxStretch)
+		{
+		  remainingWidth = tatweel - maxStretch;
+		  tatweel = maxStretch;
+		}
+		else
+		{
+		  remainingWidth = 0;
+		}
 
-	      if (maxStretch > tatweel)
-	      {
-		expa.MaxLeftTatweel -= leftTatweel;
-		expa.MaxRightTatweel -= rightTatweel;
-		remaining = true;
-		totalWeight += expa.weight;
+		double leftTatweel =
+		    (tatweel * (expa.MaxLeftTatweel / maxTatweel)) * ratio;
+		// / nuqta;
+		double rightTatweel =
+		    (tatweel * (expa.MaxRightTatweel / maxTatweel)) * ratio;
+		// / nuqta;
+
+		glyph_info[index].lefttatweel += leftTatweel;
+		glyph_info[index].righttatweel += rightTatweel;
+		/*
+		if (std::isnan (glyph_info[index].lefttatweel) ||
+		    std::isnan (glyph_info[index].righttatweel))
+		{ int stop = 5; }*/
+
+		diff -= tatweel;
+
+		if (maxStretch > tatweel)
+		{
+		  expa.MaxLeftTatweel -= leftTatweel;
+		  expa.MaxRightTatweel -= rightTatweel;
+		  remaining = true;
+		  totalWeight += expa.weight;
+		}
+		else
+		{
+		  expa.weight = 0;
+		}
 	      }
 	      else
 	      {
@@ -245,91 +251,85 @@ JustificationContext::justify (int &diff,
 	    }
 	    else
 	    {
-	      expa.weight = 0;
-	    }
-	  }
-	  else
-	  {
-	    expa.MinLeftTatweel =
-		expa.MinLeftTatweel < 0 ? expa.MinLeftTatweel : 0;
-	    expa.MinRightTatweel =
-		expa.MinRightTatweel < 0 ? expa.MinRightTatweel : 0;
+	      expa.MinLeftTatweel =
+		  expa.MinLeftTatweel < 0 ? expa.MinLeftTatweel : 0;
+	      expa.MinRightTatweel =
+		  expa.MinRightTatweel < 0 ? expa.MinRightTatweel : 0;
 
-	    auto MinTatweel = expa.MinLeftTatweel + expa.MinRightTatweel;
-	    hb_position_t maxShrink = 0;
-	    if (MinTatweel != 0)
-	    {
-	      hb_position_t actualWidth = 0;
-	      hb_position_t maxWidth = 0;
-	      hb_glyph_info_t info;
-	      info.codepoint = glyph_info[index].codepoint;
-	      info.lefttatweel = glyph_info[index].lefttatweel;
-	      info.righttatweel = glyph_info[index].righttatweel;
-
-	      font->get_glyph_h_advances (1, &info.codepoint, sizeof (info),
-					  &actualWidth, 0);
-
-	      info.lefttatweel =
-		  glyph_info[index].lefttatweel + expa.MinLeftTatweel;
-	      info.righttatweel =
-		  glyph_info[index].righttatweel + expa.MinRightTatweel;
-
-	      font->get_glyph_h_advances (1, &info.codepoint, sizeof (info),
-					  &maxWidth, 0);
-
-	      maxShrink = maxWidth - actualWidth;
-	    }
-	    if (maxShrink != 0)
-	    {
-
-	      // auto maxShrink = MinTatweel * nuqta;
-	      double ratio = std::abs (MinTatweel / maxShrink);
-
-	      if (tatweel < maxShrink)
+	      auto MinTatweel = expa.MinLeftTatweel + expa.MinRightTatweel;
+	      hb_position_t maxShrink = 0;
+	      if (MinTatweel != 0)
 	      {
-		remainingWidth = tatweel - maxShrink;
-		tatweel = maxShrink;
+		hb_position_t actualWidth = 0;
+		hb_position_t maxWidth = 0;
+		hb_glyph_info_t info;
+		info.codepoint = glyph_info[index].codepoint;
+		info.lefttatweel = glyph_info[index].lefttatweel;
+		info.righttatweel = glyph_info[index].righttatweel;
+
+		font->get_glyph_h_advances (1, &info.codepoint, sizeof (info),
+					    &actualWidth, 0);
+
+		info.lefttatweel =
+		    glyph_info[index].lefttatweel + expa.MinLeftTatweel;
+		info.righttatweel =
+		    glyph_info[index].righttatweel + expa.MinRightTatweel;
+
+		font->get_glyph_h_advances (1, &info.codepoint, sizeof (info),
+					    &maxWidth, 0);
+
+		maxShrink = maxWidth - actualWidth;
 	      }
-	      else
+	      if (maxShrink != 0)
 	      {
-		remainingWidth = 0;
-	      }
 
-	      double leftTatweel =
-		  (tatweel * (expa.MinLeftTatweel / MinTatweel)) * ratio;
-	      double rightTatweel =
-		  (tatweel * (expa.MinRightTatweel / MinTatweel)) * ratio;
+		// auto maxShrink = MinTatweel * nuqta;
+		double ratio = std::abs (MinTatweel / maxShrink);
 
-	      /*
-	      if (std::isnan (leftTatweel) || std::isnan (rightTatweel))
-	      { int stop = 5; }*/
+		if (tatweel < maxShrink)
+		{
+		  remainingWidth = tatweel - maxShrink;
+		  tatweel = maxShrink;
+		}
+		else
+		{
+		  remainingWidth = 0;
+		}
 
-	      glyph_info[index].lefttatweel += leftTatweel;
-	      glyph_info[index].righttatweel += rightTatweel;
+		double leftTatweel =
+		    (tatweel * (expa.MinLeftTatweel / MinTatweel)) * ratio;
+		double rightTatweel =
+		    (tatweel * (expa.MinRightTatweel / MinTatweel)) * ratio;
 
-	      diff -= tatweel;
+		/*
+		if (std::isnan (leftTatweel) || std::isnan (rightTatweel))
+		{ int stop = 5; }*/
 
-	      if (tatweel > maxShrink)
-	      {
-		expa.MinLeftTatweel -= leftTatweel;
-		expa.MinRightTatweel -= rightTatweel;
-		remaining = true;
-		totalWeight += expa.weight;
+		glyph_info[index].lefttatweel += leftTatweel;
+		glyph_info[index].righttatweel += rightTatweel;
+
+		diff -= tatweel;
+
+		if (tatweel > maxShrink)
+		{
+		  expa.MinLeftTatweel -= leftTatweel;
+		  expa.MinRightTatweel -= rightTatweel;
+		  remaining = true;
+		  totalWeight += expa.weight;
+		}
+		else
+		{
+		  expa.weight = 0;
+		}
 	      }
 	      else
 	      {
 		expa.weight = 0;
 	      }
-	    }
-	    else
-	    {
-	      expa.weight = 0;
 	    }
 	  }
 	}
       }
-
-    next:
       insideGroup = false;
       oldWidth = 0.0;
       newWidth = 0.0;

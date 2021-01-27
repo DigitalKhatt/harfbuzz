@@ -650,7 +650,7 @@ initial_reordering_consonant_syllable (const hb_ot_shape_plan_t *plan,
    * is *not* a Halant after last consonant already.  We know that is the
    * case for Kannada, while it reorders unconditionally in other scripts,
    * eg. Malayalam, Bengali, and Devanagari.  We don't currently know about
-   * other scripts, so we blacklist Kannada.
+   * other scripts, so we block Kannada.
    *
    * Kannada test case:
    * U+0C9A,U+0CCD,U+0C9A,U+0CCD
@@ -1006,11 +1006,14 @@ initial_reordering_indic (const hb_ot_shape_plan_t *plan,
 			  hb_font_t *font,
 			  hb_buffer_t *buffer)
 {
+  if (!buffer->message (font, "start reordering indic initial"))
+    return;
   update_consonant_positions_indic (plan, font, buffer);
   insert_dotted_circles_indic (plan, font, buffer);
 
   foreach_syllable (buffer, start, end)
     initial_reordering_syllable_indic (plan, font->face, buffer, start, end);
+  (void) buffer->message (font, "end reordering indic initial");
 }
 
 static void
@@ -1333,6 +1336,7 @@ final_reordering_syllable_indic (const hb_ot_shape_plan_t *plan,
 	goto reph_move;
       }
     }
+    /* See https://github.com/harfbuzz/harfbuzz/issues/2298#issuecomment-615318654 */
 
     /*       6. Otherwise, reorder reph to the end of the syllable.
      */
@@ -1484,8 +1488,11 @@ final_reordering_indic (const hb_ot_shape_plan_t *plan,
   unsigned int count = buffer->len;
   if (unlikely (!count)) return;
 
-  foreach_syllable (buffer, start, end)
-    final_reordering_syllable_indic (plan, buffer, start, end);
+  if (buffer->message (font, "start reordering indic final")) {
+    foreach_syllable (buffer, start, end)
+      final_reordering_syllable_indic (plan, buffer, start, end);
+    (void) buffer->message (font, "end reordering indic final");
+  }
 
   HB_BUFFER_DEALLOCATE_VAR (buffer, indic_category);
   HB_BUFFER_DEALLOCATE_VAR (buffer, indic_position);

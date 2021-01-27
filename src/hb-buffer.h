@@ -59,8 +59,7 @@ HB_BEGIN_DECLS
  * The #hb_glyph_info_t is the structure that holds information about the
  * glyphs and their relation to input text.
  */
-typedef struct hb_glyph_info_t
-{
+typedef struct hb_glyph_info_t {
   hb_codepoint_t codepoint;
   /*< private >*/
   hb_mask_t      mask;
@@ -75,8 +74,8 @@ typedef struct hb_glyph_info_t
   hb_var_int_t   var1;
   hb_var_int_t   var2;
   //VisualMetaFont
-  double lefttatweel =0;
-  double righttatweel = 0;
+  double lefttatweel;
+  double righttatweel;
 } hb_glyph_info_t;
 
 /**
@@ -329,6 +328,23 @@ hb_buffer_get_flags (hb_buffer_t *buffer);
  * @HB_BUFFER_CLUSTER_LEVEL_CHARACTERS: Don't group cluster values.
  * @HB_BUFFER_CLUSTER_LEVEL_DEFAULT: Default cluster level,
  *   equal to @HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES.
+ * 
+ * Data type for holding HarfBuzz's clustering behavior options. The cluster level
+ * dictates one aspect of how HarfBuzz will treat non-base characters 
+ * during shaping.
+ *
+ * In @HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES, non-base
+ * characters are merged into the cluster of the base character that precedes them.
+ *
+ * In @HB_BUFFER_CLUSTER_LEVEL_MONOTONE_CHARACTERS, non-base characters are initially
+ * assigned their own cluster values, which are not merged into preceding base
+ * clusters. This allows HarfBuzz to perform additional operations like reorder
+ * sequences of adjacent marks.
+ *
+ * @HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES is the default, because it maintains
+ * backward compatibility with older versions of HarfBuzz. New client programs that
+ * do not need to maintain such backward compatibility are recommended to use
+ * @HB_BUFFER_CLUSTER_LEVEL_MONOTONE_CHARACTERS instead of the default.
  *
  * Since: 0.9.42
  */
@@ -379,7 +395,7 @@ hb_buffer_clear_contents (hb_buffer_t *buffer);
 
 HB_EXTERN hb_bool_t
 hb_buffer_pre_allocate (hb_buffer_t  *buffer,
-		        unsigned int  size);
+			unsigned int  size);
 
 
 HB_EXTERN hb_bool_t
@@ -461,6 +477,9 @@ HB_EXTERN hb_glyph_position_t *
 hb_buffer_get_glyph_positions (hb_buffer_t  *buffer,
 			       unsigned int *length);
 
+HB_EXTERN hb_bool_t
+hb_buffer_has_positions (hb_buffer_t  *buffer);
+
 
 HB_EXTERN void
 hb_buffer_normalize_glyphs (hb_buffer_t *buffer);
@@ -532,6 +551,27 @@ hb_buffer_serialize_glyphs (hb_buffer_t *buffer,
 			    hb_buffer_serialize_format_t format,
 			    hb_buffer_serialize_flags_t flags);
 
+HB_EXTERN unsigned int
+hb_buffer_serialize_unicode (hb_buffer_t *buffer,
+					unsigned int start,
+					unsigned int end,
+					char *buf,
+					unsigned int buf_size,
+					unsigned int *buf_consumed,
+					hb_buffer_serialize_format_t format,
+					hb_buffer_serialize_flags_t flags);
+
+HB_EXTERN unsigned int
+hb_buffer_serialize (hb_buffer_t *buffer,
+					unsigned int start,
+					unsigned int end,
+					char *buf,
+					unsigned int buf_size,
+					unsigned int *buf_consumed,
+					hb_font_t *font,
+					hb_buffer_serialize_format_t format,
+					hb_buffer_serialize_flags_t flags);
+
 HB_EXTERN hb_bool_t
 hb_buffer_deserialize_glyphs (hb_buffer_t *buffer,
 			      const char *buf,
@@ -539,6 +579,14 @@ hb_buffer_deserialize_glyphs (hb_buffer_t *buffer,
 			      const char **end_ptr,
 			      hb_font_t *font,
 			      hb_buffer_serialize_format_t format);
+
+HB_EXTERN hb_bool_t
+hb_buffer_deserialize_unicode (hb_buffer_t *buffer,
+            const char *buf,
+            int buf_len,
+            const char **end_ptr,
+            hb_buffer_serialize_format_t format);
+
 
 
 /*
@@ -594,6 +642,10 @@ hb_buffer_set_message_func (hb_buffer_t *buffer,
 			    hb_buffer_message_func_t func,
 			    void *user_data, hb_destroy_func_t destroy);
 
+#ifndef HB_NO_JUSTIFICATION
+HB_EXTERN void hb_buffer_set_justify (hb_buffer_t *buffer,
+				    int lineWidth);
+#endif
 
 HB_END_DECLS
 

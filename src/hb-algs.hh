@@ -350,16 +350,23 @@ struct
 {
   template <typename T, typename T2> constexpr auto
   operator () (T&& a, T2&& b) const HB_AUTO_RETURN
-  (hb_forward<T> (a) <= hb_forward<T2> (b) ? hb_forward<T> (a) : hb_forward<T2> (b))
+  (a <= b ? hb_forward<T> (a) : hb_forward<T2> (b))
 }
 HB_FUNCOBJ (hb_min);
 struct
 {
   template <typename T, typename T2> constexpr auto
   operator () (T&& a, T2&& b) const HB_AUTO_RETURN
-  (hb_forward<T> (a) >= hb_forward<T2> (b) ? hb_forward<T> (a) : hb_forward<T2> (b))
+  (a >= b ? hb_forward<T> (a) : hb_forward<T2> (b))
 }
 HB_FUNCOBJ (hb_max);
+struct
+{
+  template <typename T, typename T2, typename T3> constexpr auto
+  operator () (T&& x, T2&& min, T3&& max) const HB_AUTO_RETURN
+  (hb_min (hb_max (hb_forward<T> (x), hb_forward<T2> (min)), hb_forward<T3> (max)))
+}
+HB_FUNCOBJ (hb_clamp);
 
 
 /*
@@ -570,6 +577,12 @@ static inline unsigned char TOUPPER (unsigned char c)
 { return (c >= 'a' && c <= 'z') ? c - 'a' + 'A' : c; }
 static inline unsigned char TOLOWER (unsigned char c)
 { return (c >= 'A' && c <= 'Z') ? c - 'A' + 'a' : c; }
+static inline bool ISHEX (unsigned char c)
+{ return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'); }
+static inline unsigned char TOHEX (uint8_t c)
+{ return (c & 0xF) <= 9 ? (c & 0xF) + '0' : (c & 0xF) + 'a' - 10; }
+static inline uint8_t FROMHEX (unsigned char c)
+{ return (c >= '0' && c <= '9') ? c - '0' : TOLOWER (c) - 'a' + 10; }
 
 static inline unsigned int DIV_CEIL (const unsigned int a, unsigned int b)
 { return (a + (b - 1)) / b; }
@@ -600,12 +613,6 @@ hb_memset (void *s, int c, unsigned int n)
   return memset (s, c, n);
 }
 
-static inline bool
-hb_unsigned_mul_overflows (unsigned int count, unsigned int size)
-{
-  return (size > 0) && (count >= ((unsigned int) -1) / size);
-}
-
 static inline unsigned int
 hb_ceil_to_4 (unsigned int v)
 {
@@ -630,6 +637,18 @@ template <typename T> static inline bool
 hb_in_ranges (T u, T lo1, T hi1, T lo2, T hi2, T lo3, T hi3)
 {
   return hb_in_range (u, lo1, hi1) || hb_in_range (u, lo2, hi2) || hb_in_range (u, lo3, hi3);
+}
+
+
+/*
+ * Overflow checking.
+ */
+
+/* Consider __builtin_mul_overflow use here also */
+static inline bool
+hb_unsigned_mul_overflows (unsigned int count, unsigned int size)
+{
+  return (size > 0) && (count >= ((unsigned int) -1) / size);
 }
 
 

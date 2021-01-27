@@ -129,20 +129,27 @@ struct hb_array_t : hb_iter_with_fallback_t<hb_array_t<Type>, Type&>
   template <typename T>
   Type *lsearch (const T &x, Type *not_found = nullptr)
   {
-    unsigned int count = length;
-    for (unsigned int i = 0; i < count; i++)
-      if (!this->arrayZ[i].cmp (x))
-	return &this->arrayZ[i];
-    return not_found;
+    unsigned i;
+    return lfind (x, &i) ? &this->arrayZ[i] : not_found;
   }
   template <typename T>
   const Type *lsearch (const T &x, const Type *not_found = nullptr) const
   {
-    unsigned int count = length;
-    for (unsigned int i = 0; i < count; i++)
+    unsigned i;
+    return lfind (x, &i) ? &this->arrayZ[i] : not_found;
+  }
+  template <typename T>
+  bool lfind (const T &x, unsigned *pos = nullptr) const
+  {
+    for (unsigned i = 0; i < length; ++i)
       if (!this->arrayZ[i].cmp (x))
-	return &this->arrayZ[i];
-    return not_found;
+      {
+	if (pos)
+	  *pos = i;
+	return true;
+      }
+
+    return false;
   }
 
   hb_sorted_array_t<Type> qsort (int (*cmp_)(const void*, const void*))
@@ -170,6 +177,24 @@ struct hb_array_t : hb_iter_with_fallback_t<hb_array_t<Type>, Type&>
    */
 
   unsigned int get_size () const { return length * this->get_item_size (); }
+
+  /*
+   * Reverse the order of items in this array in the range [start, end).
+   */
+  void reverse (unsigned start = 0, unsigned end = -1)
+  {
+    start = hb_min (start, length);
+    end = hb_min (end, length);
+
+    if (end < start + 2)
+      return;
+
+    for (unsigned lhs = start, rhs = end - 1; lhs < rhs; lhs++, rhs--) {
+      Type temp = arrayZ[rhs];
+      arrayZ[rhs] = arrayZ[lhs];
+      arrayZ[lhs] = temp;
+    }
+  }
 
   hb_array_t sub_array (unsigned int start_offset = 0, unsigned int *seg_count = nullptr /* IN/OUT */) const
   {
