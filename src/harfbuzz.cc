@@ -53,3 +53,4 @@
 #include "hb-gdi.cc"
 #include "hb-directwrite.cc"
 #include "hb-coretext.cc"
+#include "hb-ot-layout-jtst-context.cc"

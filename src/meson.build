@@ -173,6 +173,9 @@ hb_base_sources = files(
   'hb-utf.hh',
   'hb-vector.hh',
   'hb.hh',
+  'hb-ot-layout-jtst-table.hh',
+  'hb-ot-layout-jtst-context.hh',
+  'hb-ot-layout-jtst-context.cc',
 )
 
 hb_base_ragel_generated_sources = files(
