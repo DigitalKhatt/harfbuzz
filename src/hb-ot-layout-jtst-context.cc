@@ -11,8 +11,9 @@ JustificationContext::JustificationContext (hb_font_t *font) : font{font}
 }
 
 int
-JustificationContext::getWidth (hb_buffer_t *buffer)
+JustificationContext::getWidth (hb_buffer_t *buffer, int* minLineWidth)
 {
+  int maxCurrentlineWidth = 0;
   int currentlineWidth = 0;
   unsigned int glyph_count;
 
@@ -25,18 +26,22 @@ JustificationContext::getWidth (hb_buffer_t *buffer)
 
   for (unsigned int i = 0; i < glyph_count; i++)
   {
+    currentlineWidth += glyph_pos[i].x_advance;
     if (glyph_info[i].codepoint == 32)
-    {
-      glyph_pos[i].x_advance = minSpace;
+    {      
       spaces.push_back (i);
     }
     else
     {
-      currentlineWidth += glyph_pos[i].x_advance;
+      maxCurrentlineWidth += glyph_pos[i].x_advance;
     }
   }
 
-  currentlineWidth += spaces.size () * (double) defaultSpace;
+  if (minLineWidth != nullptr) {
+    *minLineWidth = maxCurrentlineWidth + spaces.size () * (double) minSpace;
+  }
+
+  maxCurrentlineWidth += spaces.size () * (double) defaultSpace;
 
   return currentlineWidth;
 }
@@ -61,7 +66,7 @@ JustificationContext::justify (int &diff,
   while (totalWeight != 0 && remaining && remainingWidth != 0.0)
   {
 
-    double expaUnit = diff / totalWeight;
+    double expaUnit = (double)diff / totalWeight;
     if (expaUnit == 0.0)
     {
       diff = 0.0;

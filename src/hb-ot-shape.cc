@@ -1085,15 +1085,88 @@ hb_ot_justify_line (hb_ot_shape_context_t *c)
 {
   OT::JustificationContext justContext{c->font};
   if (c->buffer->justifyLine && c->buffer->lineWidth != 0)
-  {
+  {    
+    
+    const unsigned int table_index = 1u;
+    hb_ot_map_t::lookup_map_t *stagelookups = nullptr;
+    unsigned int count;
+    hb_tag_t justFeatureTag = HB_TAG ('s', 'h', 'r', '1');
+    hb_mask_t posMask = c->plan->map.get_mask (justFeatureTag);
+    
+
+    c->plan->map.get_stage_lookups (
+	table_index /*GPOS*/,
+	c->plan->map.get_feature_stage (table_index /*GPOS*/, justFeatureTag),
+	(const hb_ot_map_t::lookup_map_t **) &stagelookups, &count);
+
+    for (unsigned int il = 0; il < count; il++)
+    {
+      for (int tableIndex = 0; tableIndex < 2; tableIndex++) {
+
+	hb_tag_t tableTag = tableIndex == 0 ? HB_OT_TAG_GSUB : HB_OT_TAG_GPOS;
+	unsigned feature_index = 0;
+	bool found = hb_ot_layout_language_find_feature (
+	    c->face, tableTag, 0, HB_OT_LAYOUT_DEFAULT_LANGUAGE_INDEX,
+	    justFeatureTag, &feature_index);
+
+	if (found)
+	{
+	  unsigned int lookup_count;
+	  unsigned int offset = 0;
+	  unsigned int lookup_indexes[32];
+	  /* TODO has to be done elsewhere (i.e during map compilation) */
+	  do
+	  {
+	    
+	    lookup_count = ARRAY_LENGTH (lookup_indexes);
+	    hb_ot_layout_feature_get_lookups (c->face, tableTag, feature_index,
+					      offset, &lookup_count,
+					      lookup_indexes);
+	    for (unsigned int j = 0; j < lookup_count; j++)
+	    {
+	      if (lookup_indexes[j] == stagelookups[il].index)
+	      { stagelookups[il].mask = 0; }
+	    }
+	    offset += lookup_count;
+	  } while (lookup_count == ARRAY_LENGTH (lookup_indexes));
+	  
+	}
+      }
+
+      /*
+      for (int tt = 0; tt < 2; tt++) {
+	auto &steps = tt == 0 ? c->font->face->table.JTST->get_stretch_steps ()
+			      : c->font->face->table.JTST->get_shrink_steps ();
+
+	for (int stepIndex = 0; stepIndex < steps.len; stepIndex++)
+	{
+	  auto &step = steps[stepIndex];
+	  auto &lookups = step.get_lookups ();
+	  int lookupLen = lookups.len;
+	  if (!step.isSubtitution ())
+	  {
+	    for (int j = 0; j < lookupLen; j++)
+	    {
+	      int lookup_index = lookups[j];
+	      if (lookup_index == stagelookups[il].index)
+	      {		
+		stagelookups[il].mask = 0;
+	      }
+	    }
+	  }
+	}
+      }*/
+    }
+
+    c->buffer->add_masks (posMask);
+
+    bool needPosition = false;
+    
+
     unsigned int glyph_count;
-
-    hb_buffer_t *copy_buffer = nullptr;
-    copy_buffer = hb_buffer_create ();
-    hb_buffer_append (copy_buffer, c->buffer, 0, -1);
-
-    hb_glyph_position_t *glyph_pos =
-	hb_buffer_get_glyph_positions (copy_buffer, &glyph_count);
+    
+    hb_buffer_t *copy_buffer = hb_buffer_create ();
+    bool copyBuffer = true;
 
     c->buffer->justContext = &justContext;
     int currentlineWidth = justContext.getWidth (c->buffer);
@@ -1110,11 +1183,21 @@ hb_ot_justify_line (hb_ot_shape_context_t *c)
       auto &step = steps[stepIndex];
       auto &lookups = step.get_lookups ();
       int lookupLen = lookups.len;
+      
 
       if (lookupLen != 0)
       {
 	if (step.isSubtitution ())
 	{
+	  if (copyBuffer) {
+	    hb_buffer_clear_contents (copy_buffer);
+	    hb_buffer_append (copy_buffer, c->buffer, 0, -1);
+	    copyBuffer = false;
+	  }
+
+	  hb_glyph_position_t *glyph_pos =
+	      hb_buffer_get_glyph_positions (copy_buffer, &glyph_count);
+
 	  for (int j = 0; j < lookupLen; j++)
 	  {
 	    int lookup_index = lookups[j];
@@ -1127,20 +1210,41 @@ hb_ot_justify_line (hb_ot_shape_context_t *c)
 	    ac.set_auto_zwj (1);
 	    ac.set_auto_zwnj (1);
 
+	    needPosition = true;
+
 	    hb_ot_layout_substitute_lookup (
 		&ac,
 		c->font->face->table.GSUB->table->get_lookup (lookup_index),
 		c->font->face->table.GSUB->accels[lookup_index]);
 	  }
+	  
 
 	  justContext.justify (diff, c->buffer, glyph_pos);
 	}
+	else
+	{
+	  for (int j = 0; j < lookupLen; j++)
+	  {
+	    int lookup_index = lookups[j];
+	    for (unsigned int il = 0; il < count; il++) {
+	      if (stagelookups[il].index == lookup_index) {
+		stagelookups[il].mask = posMask;
+	      }
+	    }	    
+	  }
+	  hb_ot_position (c);	  
+	  diff = c->buffer->lineWidth - justContext.getWidth (c->buffer); 
+	  copyBuffer = true;
+	  needPosition = false;
+	}
       }
+	
       stepIndex++;
     }
 
-    if (copy_buffer) hb_buffer_destroy (copy_buffer);
-    hb_ot_position (c);
+    hb_buffer_destroy (copy_buffer);
+    if (needPosition)
+      hb_ot_position (c);
   }
   if (HB_DIRECTION_IS_BACKWARD (c->buffer->props.direction))
     hb_buffer_reverse (c->buffer);

@@ -1854,6 +1854,11 @@ inline void hb_ot_map_t::apply (const Proxy &proxy,
     const stage_map_t *stage = &stages[table_index][stage_index];
     for (; i < stage->last_lookup; i++)
     {
+#ifndef HB_NO_JUSTIFICATION
+      /* TODO hack to disable lookup during justification */
+      if (!lookups[table_index][i].mask)
+	continue;
+#endif
       unsigned int lookup_index = lookups[table_index][i].index;
       if (!buffer->message (font, "start lookup %d", lookup_index)) continue;
       c.set_lookup_index (lookup_index);
