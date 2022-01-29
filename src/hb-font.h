@@ -943,6 +943,32 @@ hb_font_draw_glyph (hb_font_t *font, hb_codepoint_t glyph,
 		    const hb_draw_funcs_t *funcs, void *user_data);
 #endif
 
+/* Added for VisualMetaFont */
+typedef struct hb_buffer_t hb_buffer_t;
+typedef struct hb_substitution_context_t
+{
+  // OT::hb_ot_apply_context_t *ot_context;
+  unsigned int lookup_index;
+  unsigned int subtable_index;
+  unsigned int substitute;
+  unsigned int curr;
+  hb_buffer_t *buffer;
+} hb_substitution_context_t;
+
+typedef hb_bool_t (*hb_font_get_substitution_func_t) (
+    hb_font_t *font,
+    void *font_data,
+    hb_substitution_context_t *context,
+    void *user_data);
+
+HB_EXTERN void
+hb_font_funcs_set_substitution_func (hb_font_funcs_t *ffuncs,
+				     hb_font_get_substitution_func_t func,
+				     void *user_data,
+				     hb_destroy_func_t destroy);
+
 HB_END_DECLS
+
+
 
 #endif /* HB_FONT_H */

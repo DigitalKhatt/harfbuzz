@@ -66,30 +66,11 @@ namespace OT {
 struct hb_ot_apply_context_t;
 }
 
-typedef struct hb_substitution_context_t
-{
-  OT::hb_ot_apply_context_t *ot_context;
-  unsigned int substitute;
-} hb_substitution_context_t;
-
-typedef hb_bool_t (*hb_font_get_substitution_func_t) (
-    hb_font_t *font,
-    void *font_data,
-    hb_substitution_context_t *context,
-    void *user_data);
-
 typedef hb_bool_t (*hb_font_get_apply_lookup_func_t) (
     hb_font_t *font,
     void *font_data,
     OT::hb_ot_apply_context_t *c,
     void *user_data);
-
-
-HB_EXTERN void
-hb_font_funcs_set_substitution_func (hb_font_funcs_t *ffuncs,
-				     hb_font_get_substitution_func_t func,
-				     void *user_data,
-				     hb_destroy_func_t destroy);
 
 HB_EXTERN void
 hb_font_funcs_set_apply_lookup_func (hb_font_funcs_t *ffuncs,

@@ -334,8 +334,12 @@ struct SingleSubstFormat10
 
     hb_substitution_context_t substitution_context;
 
-    substitution_context.ot_context = c;
+    //substitution_context.ot_context = c;
+    substitution_context.lookup_index = c->lookup_index;
+    substitution_context.subtable_index = c->subtable_index;
+    substitution_context.buffer = c->buffer;
     substitution_context.substitute = substitute[index].substitute;
+    substitution_context.curr = c->buffer->idx;
 
     auto result = c->font->get_substitution (&substitution_context);
 

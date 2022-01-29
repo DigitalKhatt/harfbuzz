@@ -30,6 +30,21 @@ namespace OT {
 
 typedef IndexArray JtstLookupList;
 
+struct JtstAfterGsub
+{  
+
+  const JtstLookupList &get_lookups () const { return lookupList; }
+
+  bool sanitize (hb_sanitize_context_t *c) const
+  {
+    TRACE_SANITIZE (this);
+    return_trace (true);
+  }
+
+  protected:  
+  JtstLookupList lookupList;
+};
+
 struct JtstStep
 {
   bool isSubtitution () const { return (flags & 1); }
@@ -64,6 +79,10 @@ struct JTST
 
   const JtstSteps& get_stretch_steps () const { return this + stretchSteps; }
   const JtstSteps &get_shrink_steps () const { return this + shrinkSteps; }
+  const JtstAfterGsub &get_after_gsub () const
+  {
+    return this + afterGsubLookups;
+  }
 
   bool sanitize (hb_sanitize_context_t *c) const
   {
@@ -71,7 +90,8 @@ struct JTST
     return_trace (version.sanitize (c)
       && likely (version.major == 1)
       && stretchSteps.sanitize (c, this)
-      && shrinkSteps.sanitize (c, this));
+      && shrinkSteps.sanitize (c, this)
+      && afterGsubLookups.sanitize (c, this));
   }
 
   protected:
@@ -79,11 +99,12 @@ struct JTST
 			   * to 0x00010000u */
 
   OffsetTo<JtstSteps> stretchSteps;
-
   OffsetTo<JtstSteps> shrinkSteps;
+  OffsetTo<JtstAfterGsub> afterGsubLookups;
+
 
   public:
-    DEFINE_SIZE_STATIC (8);
+    DEFINE_SIZE_STATIC (10);
 };
 
 } /* namespace OT */

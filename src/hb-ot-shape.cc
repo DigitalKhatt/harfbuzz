@@ -1173,6 +1173,10 @@ hb_ot_justify_line (hb_ot_shape_context_t *c)
     int diff = c->buffer->lineWidth - currentlineWidth;
     bool isStretch = diff > 0;
 
+    auto &aftergsub = c->font->face->table.JTST->get_after_gsub ();
+    auto &aftergsubLookups = aftergsub.get_lookups ();
+    int aftergsubLen = aftergsubLookups.len;
+
     auto &steps = isStretch ? c->font->face->table.JTST->get_stretch_steps ()
 			    : c->font->face->table.JTST->get_shrink_steps ();
     unsigned int stepIndex = 0;
@@ -1220,6 +1224,26 @@ hb_ot_justify_line (hb_ot_shape_context_t *c)
 	  
 
 	  justContext.justify (diff, c->buffer, glyph_pos);
+
+	  //TODO Optimize call after multiple subst
+	  for (int j = 0; j < aftergsubLen; j++) {
+	    int lookup_index = aftergsubLookups[j];
+	    const unsigned int table_index = 0u;
+
+	    OT::hb_ot_apply_context_t ac (table_index, c->font, c->buffer);
+	    ac.set_recurse_func (OT::SubstLookup::apply_recurse_func);
+	    ac.set_lookup_index (lookup_index);
+	    ac.set_lookup_mask (2);
+	    ac.set_auto_zwj (1);
+	    ac.set_auto_zwnj (1);
+
+	    needPosition = true;
+
+	    hb_ot_layout_substitute_lookup (
+		&ac,
+		c->font->face->table.GSUB->table->get_lookup (lookup_index),
+		c->font->face->table.GSUB->accels[lookup_index]);
+	  }
 	}
 	else
 	{

@@ -73,6 +73,7 @@ class JustificationContext
 
   int getWidth (hb_buffer_t *buffer, int *minLineWidth = nullptr);
   void justify (int& diff, hb_buffer_t *buffer, hb_glyph_position_t *glyph_pos);
+  void justify_old (int &diff, hb_buffer_t *buffer, hb_glyph_position_t *glyph_pos);
 
   private:
   hb_font_t *font;

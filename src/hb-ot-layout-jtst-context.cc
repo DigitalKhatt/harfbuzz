@@ -11,7 +11,7 @@ JustificationContext::JustificationContext (hb_font_t *font) : font{font}
 }
 
 int
-JustificationContext::getWidth (hb_buffer_t *buffer, int* minLineWidth)
+JustificationContext::getWidth (hb_buffer_t *buffer, int *minLineWidth)
 {
   int maxCurrentlineWidth = 0;
   int currentlineWidth = 0;
@@ -27,17 +27,15 @@ JustificationContext::getWidth (hb_buffer_t *buffer, int* minLineWidth)
   for (unsigned int i = 0; i < glyph_count; i++)
   {
     currentlineWidth += glyph_pos[i].x_advance;
-    if (glyph_info[i].codepoint == 32)
-    {      
-      spaces.push_back (i);
-    }
+    if (glyph_info[i].codepoint == 32) { spaces.push_back (i); }
     else
     {
       maxCurrentlineWidth += glyph_pos[i].x_advance;
     }
   }
 
-  if (minLineWidth != nullptr) {
+  if (minLineWidth != nullptr)
+  {
     *minLineWidth = maxCurrentlineWidth + spaces.size () * (double) minSpace;
   }
 
@@ -46,9 +44,9 @@ JustificationContext::getWidth (hb_buffer_t *buffer, int* minLineWidth)
   return currentlineWidth;
 }
 void
-JustificationContext::justify (int &diff,
-			       hb_buffer_t *buffer,
-			       hb_glyph_position_t *glyph_pos)
+JustificationContext::justify_old (int &diff,
+				   hb_buffer_t *buffer,
+				   hb_glyph_position_t *glyph_pos)
 {
   unsigned int glyph_count;
 
@@ -66,7 +64,7 @@ JustificationContext::justify (int &diff,
   while (totalWeight != 0 && remaining && remainingWidth != 0.0)
   {
 
-    double expaUnit = (double)diff / totalWeight;
+    double expaUnit = (double) diff / totalWeight;
     if (expaUnit == 0.0)
     {
       diff = 0.0;
@@ -115,7 +113,9 @@ JustificationContext::justify (int &diff,
       group.push_back (i);
       oldWidth += glyph_pos[index].x_advance;
       if (glyph_info[index].codepoint == this->Substitutes[i])
-      { newWidth += glyph_pos[index].x_advance; }
+      {
+	newWidth += glyph_pos[index].x_advance;
+      }
       else
       {
 	hb_position_t advance = 0;
@@ -147,7 +147,8 @@ JustificationContext::justify (int &diff,
 	continue;
       }
 
-      if (groupExpa.weight != 0) {
+      if (groupExpa.weight != 0)
+      {
 	int widthDiff = newWidth - oldWidth;
 
 	auto tatweel = expaUnit * groupExpa.weight + remainingWidth;
@@ -341,6 +342,191 @@ JustificationContext::justify (int &diff,
       groupExpa = {};
       groupExpa.weight = 0;
       group.clear ();
+    }
+  }
+}
+void
+JustificationContext::justify (int &diff,
+			       hb_buffer_t *buffer,
+			       hb_glyph_position_t *glyph_pos)
+{
+  unsigned int glyph_count;
+
+  hb_glyph_info_t *glyph_info =
+      hb_buffer_get_glyph_infos (buffer, &glyph_count);
+
+  //int totalWeight = this->totalWeight;
+
+  bool remaining = true;
+
+  double remainingWidth = -1;
+
+  bool stretch = diff > 0;
+
+  std::map<int, GlyphExpansion> affectedIndexes;
+
+  bool insideGroup = false;
+  hb_position_t oldWidth = 0;
+  hb_position_t newWidth = 0;
+  hb_position_t maxExpansion = 0;
+  GlyphExpansion groupExpa{};
+  groupExpa.weight = 0;
+  std::vector<int> group;
+  remaining = false;
+  remainingWidth = 0.0;
+
+  std::vector<unsigned int> NewGlyphsToExtend;
+
+  double totalExpansion = 0.0;
+
+  for (unsigned int i = 0; i < this->GlyphsToExtend.size (); i++)
+  {
+
+    int index = this->GlyphsToExtend[i];
+
+    GlyphExpansion &expa = this->Expansions[index];
+
+    if (expa.stretchIsAbsolute)
+    {
+      expa.MaxLeftTatweel = expa.MaxLeftTatweel - glyph_info[index].lefttatweel;
+      expa.MaxRightTatweel =
+	  expa.MaxRightTatweel - glyph_info[index].righttatweel;
+      expa.stretchIsAbsolute = false;
+    }
+
+    if (expa.shrinkIsAbsolute)
+    {
+      expa.MinLeftTatweel = expa.MinLeftTatweel - glyph_info[index].lefttatweel;
+      expa.MinRightTatweel =
+	  expa.MinRightTatweel - glyph_info[index].righttatweel;
+      expa.shrinkIsAbsolute = false;
+    }
+
+    group.push_back (i);
+    oldWidth += glyph_pos[index].x_advance;
+    hb_position_t advance = 0;
+    hb_position_t maxWidth = 0;
+    hb_glyph_info_t info;
+    info.codepoint = this->Substitutes[i];
+    if (glyph_info[index].codepoint == this->Substitutes[i])
+    {
+      advance = glyph_pos[index].x_advance;
+    }
+    else
+    {      
+      info.lefttatweel = glyph_pos[index].lefttatweel;
+      info.righttatweel = glyph_pos[index].righttatweel;
+
+      font->get_glyph_h_advances (1, &info.codepoint, sizeof (info), &advance,
+				  0);
+    }
+    if (stretch)
+    {
+      info.lefttatweel = glyph_info[index].lefttatweel + expa.MaxLeftTatweel;
+      info.righttatweel = glyph_info[index].righttatweel + expa.MaxRightTatweel;
+    }
+    else
+    {
+      info.lefttatweel = glyph_info[index].lefttatweel + expa.MinLeftTatweel;
+      info.righttatweel = glyph_info[index].righttatweel + expa.MinRightTatweel;
+    }
+
+    font->get_glyph_h_advances (1, &info.codepoint, sizeof (info), &maxWidth,
+				0);
+
+    newWidth += advance;    
+    maxExpansion += maxWidth - advance;
+
+    groupExpa.weight += expa.weight;
+    groupExpa.MinLeftTatweel += expa.MinLeftTatweel;
+    groupExpa.MaxLeftTatweel += expa.MaxLeftTatweel;
+    groupExpa.MinRightTatweel += expa.MinRightTatweel;
+    groupExpa.MaxRightTatweel += expa.MaxRightTatweel;
+
+    if (expa.startEndLig == StartEndLig::Start)
+    {
+      insideGroup = true;
+      continue;
+    }
+    else if (insideGroup && expa.startEndLig != StartEndLig::End &&
+	     expa.startEndLig != StartEndLig::EndKashida)
+    {
+      continue;
+    }
+
+    int widthDiff = newWidth - oldWidth;
+
+    if ((stretch && widthDiff <= diff) || (!stretch && widthDiff >= diff))
+    {
+      diff = diff - widthDiff;
+      totalExpansion += maxExpansion;
+      for (int i : group)
+      {
+	int index = this->GlyphsToExtend[i];
+	//GlyphExpansion &expa = this->Expansions[index];
+
+	glyph_info[index].codepoint = this->Substitutes[i];
+
+	NewGlyphsToExtend.push_back (index);
+      }
+    }
+
+    insideGroup = false;
+    oldWidth = 0.0;
+    newWidth = 0.0;
+    maxExpansion = 0;
+    groupExpa = {};
+    groupExpa.weight = 0;
+    group.clear ();
+  }
+
+  double ratio = 0.0;
+
+  if (stretch && diff > 0 && totalExpansion > 0)
+  {
+    if (totalExpansion > diff)
+    {
+      ratio = diff / totalExpansion;
+      diff = 0.0;
+    }
+    else
+    {
+      ratio = 1.0;
+      diff = diff - totalExpansion;
+    }
+  }
+  else if (!stretch && diff < 0 && totalExpansion < 0)
+  {
+    if (totalExpansion < diff)
+    {
+      ratio = diff / totalExpansion;
+      diff = 0.0;
+    }
+    else
+    {
+      ratio = 1;
+      diff = diff - totalExpansion;
+    }
+  }
+
+  if (ratio == 0.0) return;
+
+  for (unsigned int i = 0; i < NewGlyphsToExtend.size (); i++)
+  {
+
+    int index = NewGlyphsToExtend[i];
+
+    GlyphExpansion &expa = this->Expansions[index];
+
+    if (stretch)
+    {
+      glyph_info[index].lefttatweel += expa.MaxLeftTatweel * ratio;
+      glyph_info[index].righttatweel += expa.MaxRightTatweel * ratio;
+    }
+    else
+    {
+      glyph_info[index].lefttatweel += expa.MinLeftTatweel * ratio;
+      glyph_info[index].righttatweel += expa.MinRightTatweel * ratio;
     }
   }
 }
