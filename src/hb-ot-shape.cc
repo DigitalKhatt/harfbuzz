@@ -1081,17 +1081,16 @@ hb_propagate_flags (hb_buffer_t *buffer)
 }
 #ifndef HB_NO_JUSTIFICATION
 static void
-hb_ot_justify_line (hb_ot_shape_context_t *c)
+disableShrinkFeature (hb_ot_shape_context_t *c)
 {
   OT::JustificationContext justContext{c->font};
   if (c->buffer->justifyLine && c->buffer->lineWidth != 0)
-  {    
-    
+  {
+
     const unsigned int table_index = 1u;
     hb_ot_map_t::lookup_map_t *stagelookups = nullptr;
     unsigned int count;
     hb_tag_t justFeatureTag = HB_TAG ('s', 'h', 'r', '1');
-    hb_mask_t posMask = c->plan->map.get_mask (justFeatureTag);
     
 
     c->plan->map.get_stage_lookups (
@@ -1101,7 +1100,8 @@ hb_ot_justify_line (hb_ot_shape_context_t *c)
 
     for (unsigned int il = 0; il < count; il++)
     {
-      for (int tableIndex = 0; tableIndex < 2; tableIndex++) {
+      for (int tableIndex = 0; tableIndex < 2; tableIndex++)
+      {
 
 	hb_tag_t tableTag = tableIndex == 0 ? HB_OT_TAG_GSUB : HB_OT_TAG_GPOS;
 	unsigned feature_index = 0;
@@ -1115,9 +1115,8 @@ hb_ot_justify_line (hb_ot_shape_context_t *c)
 	  unsigned int offset = 0;
 	  unsigned int lookup_indexes[32];
 	  /* TODO has to be done elsewhere (i.e during map compilation) */
-	  do
-	  {
-	    
+	  do {
+
 	    lookup_count = ARRAY_LENGTH (lookup_indexes);
 	    hb_ot_layout_feature_get_lookups (c->face, tableTag, feature_index,
 					      offset, &lookup_count,
@@ -1125,38 +1124,36 @@ hb_ot_justify_line (hb_ot_shape_context_t *c)
 	    for (unsigned int j = 0; j < lookup_count; j++)
 	    {
 	      if (lookup_indexes[j] == stagelookups[il].index)
-	      { stagelookups[il].mask = 0; }
-	    }
-	    offset += lookup_count;
-	  } while (lookup_count == ARRAY_LENGTH (lookup_indexes));
-	  
-	}
-      }
-
-      /*
-      for (int tt = 0; tt < 2; tt++) {
-	auto &steps = tt == 0 ? c->font->face->table.JTST->get_stretch_steps ()
-			      : c->font->face->table.JTST->get_shrink_steps ();
-
-	for (int stepIndex = 0; stepIndex < steps.len; stepIndex++)
-	{
-	  auto &step = steps[stepIndex];
-	  auto &lookups = step.get_lookups ();
-	  int lookupLen = lookups.len;
-	  if (!step.isSubtitution ())
-	  {
-	    for (int j = 0; j < lookupLen; j++)
-	    {
-	      int lookup_index = lookups[j];
-	      if (lookup_index == stagelookups[il].index)
-	      {		
+	      {
 		stagelookups[il].mask = 0;
 	      }
 	    }
-	  }
+	    offset += lookup_count;
+	  } while (lookup_count == ARRAY_LENGTH (lookup_indexes));
 	}
-      }*/
+      }
     }
+  }    
+}
+#endif
+#ifndef HB_NO_JUSTIFICATION
+static void
+hb_ot_justify_line (hb_ot_shape_context_t *c)
+{
+  OT::JustificationContext justContext{c->font};
+  if (c->buffer->justifyLine && c->buffer->lineWidth != 0)
+  {
+
+     const unsigned int table_index = 1u;
+    hb_ot_map_t::lookup_map_t *stagelookups = nullptr;
+    unsigned int count;
+    hb_tag_t justFeatureTag = HB_TAG ('s', 'h', 'r', '1');
+    hb_mask_t posMask = c->plan->map.get_mask (justFeatureTag);
+
+    c->plan->map.get_stage_lookups (
+	table_index /*GPOS*/,
+	c->plan->map.get_feature_stage (table_index /*GPOS*/, justFeatureTag),
+	(const hb_ot_map_t::lookup_map_t **) &stagelookups, &count);
 
     c->buffer->add_masks (posMask);
 
@@ -1318,6 +1315,10 @@ hb_ot_shape_internal (hb_ot_shape_context_t *c)
   }
 
   hb_ot_substitute_pre (c);
+
+#ifndef HB_NO_JUSTIFICATION
+  disableShrinkFeature (c);
+#endif
 
   hb_ot_position (c);
 

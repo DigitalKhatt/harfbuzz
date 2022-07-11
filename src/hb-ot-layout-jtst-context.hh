@@ -51,9 +51,10 @@ struct GlyphExpansion
 class JustificationContext
 {
   public:
+  /*
   const int MINSPACEWIDTH = 50;
   const int SPACEWIDTH = 75;
-  const int MAXSPACEWIDTH = 100;
+  const int MAXSPACEWIDTH = 100;*/
 
 
   std::vector<unsigned int> GlyphsToExtend;
@@ -73,12 +74,11 @@ class JustificationContext
 
   int getWidth (hb_buffer_t *buffer, int *minLineWidth = nullptr);
   void justify (int& diff, hb_buffer_t *buffer, hb_glyph_position_t *glyph_pos);
-  void justify_old (int &diff, hb_buffer_t *buffer, hb_glyph_position_t *glyph_pos);
 
   private:
   hb_font_t *font;
-  int minSpace;
-  int defaultSpace;
+  //int minSpace;
+  //int defaultSpace;
   
 };
 
