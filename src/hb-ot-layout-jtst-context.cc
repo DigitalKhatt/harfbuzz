@@ -127,10 +127,10 @@ JustificationContext::justify (int &diff,
     hb_position_t nextWidth = 0;
     hb_position_t maxWidth = 0;
 
-    font->get_glyph_h_advances (1, &info.codepoint, sizeof (info),
-				&currentWidth, 0);
+    /* font->get_glyph_h_advances (1, &info.codepoint, sizeof (info),
+				&currentWidth, 0);*/
 
-    // oldWidth += glyph_pos[index].x_advance;
+    currentWidth = glyph_pos[index].x_advance;
 
     info.codepoint = this->Substitutes[i];
     auto minLeft = expa.MinLeftTatweel;

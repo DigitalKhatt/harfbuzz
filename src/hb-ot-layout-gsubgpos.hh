@@ -3442,8 +3442,103 @@ struct GSUBGPOS
   DEFINE_SIZE_MIN (10);
 };
 
+struct ChainAction
+{
+  bool sanitize (hb_sanitize_context_t *c) const
+  {
+    TRACE_SANITIZE (this);
+    return_trace (likely (c->check_struct (this)));
+  }
+
+  HBUINT8 chainId;  /* Action chain number of this action (i.e. actionid in ChainNode) */
+  HBUINT8 distance; /* How far back to process */
+  HBUINT16 lookup;  /* Lookup id to execute */
+
+  public:
+  DEFINE_SIZE_STATIC (4);
+};
+
+struct BackLink
+{ 
+  friend struct FSMFormat1;
+
+  bool sanitize (hb_sanitize_context_t *c) const
+  {
+    TRACE_SANITIZE (this);
+    return_trace (likely (c->check_struct (this)));
+  }
+
+  protected:
+  HBUINT16 prevLink; /* Back link index of the previous transition */
+  ArrayOf<ChainAction> chainActions; /* Actions to be executed if this link is passed throw when backtracking. */
+  public:
+  DEFINE_SIZE_ARRAY (4, chainActions);
+};
+
+struct BackLinkArray
+{
+  friend struct FSMFormat1;
+
+  bool sanitize (hb_sanitize_context_t *c) const
+  {
+    TRACE_SANITIZE (this);
+    return_trace (likely (c->check_struct (this)));
+  }
+
+  protected:  
+  OffsetArrayOf<BackLink>
+      backlinks; /* array of backlinks */
+  public:
+  DEFINE_SIZE_ARRAY (2, backlinks);
+};
+
+struct ClassNode
+{
+  friend struct FSMFormat1;
+
+  bool sanitize (hb_sanitize_context_t *c) const
+  {
+    TRACE_SANITIZE (this);
+    return_trace (likely (c->check_struct (this)));
+  }
+
+  int cmp (const unsigned int classIndex_) const
+  {
+    return classIndex_ < classIndex ? -1 : classIndex_ > classIndex ? 1 : 0;
+  }
+
+  HBUINT16 classIndex; /* class index value to match */
+  HBUINT16 chainNode;  /* chainNode index to use on match */
+  OffsetTo<BackLinkArray> backLinks; /* offset to BackLinkArray from ChainNode */
+
+  public:
+  DEFINE_SIZE_STATIC (6);
+};
+
+
+struct ChainNode
+{
+  friend struct FSMFormat1;
+
+  bool sanitize (hb_sanitize_context_t *c) const
+  {
+    TRACE_SANITIZE (this);
+    return_trace (likely (c->check_struct (this)));
+  }
+
+  protected:
+  HBUINT8 actionid;    /* Action identifier for a final node */  
+  OffsetTo<BackLink> backLink;    /* Back link for a final state. */
+  SortedArrayOf<ClassNode> classNodes; /* Array of numTransitions ClassNode */
+  public:
+  DEFINE_SIZE_MIN(1);
+};
+
+
 struct FSMFormat1
 {
+
+  
   void closure_lookups (hb_closure_lookups_context_t *c) const {}
 
   void collect_variation_indices (hb_collect_variation_indices_context_t *c) const {}
@@ -3459,26 +3554,226 @@ struct FSMFormat1
   }
 
   void collect_glyphs (hb_collect_glyphs_context_t *c) const
-  {
-    
+  {    
   }
 
   bool would_apply (hb_would_apply_context_t *c) const
   {
     return true;
   }
+  
+  const Coverage &get_coverage () const {    
+    auto &cov = this + coverage;
+    return cov;
+    //return Null (Coverage);
 
-  const Coverage &get_coverage () const
-  {    
-    return coverage;
   }
+
+
 
   bool apply (hb_ot_apply_context_t *c) const
   {
 
-    c->font->get_apply_lookup (c);
+    struct Pos
+    {
+      int state;
+      int idx;
+      const BackLinkArray* backlinks = nullptr;
+    };
 
-    return false;
+    //c->font->get_apply_lookup (c);
+
+    //return false;
+
+    bool ret = false;
+    hb_buffer_t *buffer = c->buffer;
+    //int furthestPointReached  = 0;
+    //int nbIterWithoutAdvance = 0;
+    bool restart = true;
+    int lastfinal = -1;
+    unsigned int lastPositionIndex;
+    int lastPosition = 0;
+    //int currentState = 0;
+    int currentStateIndex = 0;
+    hb_vector_t<Pos> accumulatedStates;
+    const ClassDef &class_def = this + classDef;
+    hb_ot_apply_context_t::skipping_iterator_t &advanced_iter = c->iter_context;
+    while (buffer->idx < buffer->len && buffer->successful)
+    {
+
+      if (restart) {
+	      
+	auto classIndex = class_def.get_class (c->buffer->cur ().codepoint);
+
+	      if (classIndex == 0) {
+		buffer->next_glyph ();
+		continue;
+	      }
+
+	lastfinal = -1;    
+
+	hb_ot_apply_context_t::skipping_iterator_t &skippy_iter = c->iter_context;
+	skippy_iter.reset (c->buffer->backtrack_len (), maxBackup);
+	//skippy_iter.set_match_func (match_func, match_data, backtrack);
+
+	for (unsigned int i = 0; i < maxBackup; i++) {
+		if (!skippy_iter.prev ()) break;
+	}
+
+	if (skippy_iter.idx < minBackup)
+	{
+		buffer->next_glyph ();
+		continue;
+	}
+
+	int backupIndex = skippy_iter.idx - minBackup;
+
+	auto array = backupNode.as_array (maxBackup - minBackup + 1);
+
+	currentStateIndex = array[backupIndex];
+
+	lastPosition = buffer->idx;	      
+
+	buffer->move_to (skippy_iter.idx);	      
+
+	accumulatedStates.reset ();
+
+	auto pos = accumulatedStates.push ();
+
+	pos->state = currentStateIndex;
+	pos->idx = buffer->idx;
+
+	restart = false;
+      }	    
+
+      int nextIndex = -1;
+
+      advanced_iter.reset (buffer->idx - 1, 1);
+      if (advanced_iter.next ()) {
+	  auto classIndex = class_def.get_class (c->buffer->info[advanced_iter.idx].codepoint);
+
+	  auto &currentChainNode = this + chainNodes[currentStateIndex];
+	     
+	  auto classNode = &currentChainNode.classNodes.bsearch (classIndex);
+	  if (classNode->classIndex == 0) {
+	    classNode = &currentChainNode.classNodes.bsearch (0xFFFF);
+	  }
+	  if (classNode->classIndex != 0) {
+	    nextIndex = classNode->chainNode;
+	    auto& pos = accumulatedStates.tail();
+	    auto &backlinksref = &currentChainNode + classNode->backLinks;
+	    pos.backlinks = &backlinksref;
+	  }
+      }
+
+      // current glyph matched
+      if (nextIndex != -1) {
+	currentStateIndex = nextIndex;
+	auto pos = accumulatedStates.push ();
+
+	pos->state = currentStateIndex;
+	pos->idx = advanced_iter.idx;
+	auto &currentChainNode = this + chainNodes[currentStateIndex];
+	  if (currentChainNode.actionid != 0) {
+	    lastfinal = currentChainNode.actionid;
+	    lastPositionIndex = accumulatedStates.length;
+	  }
+	  auto nexIdx = advanced_iter.idx + 1;
+	  if (nexIdx < buffer->len) {
+	    buffer->move_to (nexIdx);
+	    continue;
+	  }
+      }
+
+      // current character not matched or end on buffer
+      // backtrack to last matched if exists
+      if (lastfinal != -1) {
+
+	struct Actions
+	{
+	  int idx;
+	  const BackLink* backLink;
+	};
+
+	hb_vector_t<Actions> actionsList;
+	auto &finalStatePos = accumulatedStates[lastPositionIndex - 1];
+	auto &finalNode = this + chainNodes[finalStatePos.state];
+
+	auto& baclLinkAdr = &finalNode + finalNode.backLink;
+
+	Actions lastLink{finalStatePos.idx, &baclLinkAdr};
+
+	if (lastLink.backLink->chainActions.len > 0)
+	{
+	  actionsList.push (lastLink);
+	}
+
+	for (int i = lastPositionIndex - 2; i >= 0; i--) {
+	  auto &pos = accumulatedStates[i];
+	  int lastTran = lastLink.backLink->prevLink;
+	  auto vv = &(pos.backlinks + pos.backlinks->backlinks[lastTran]);
+	  lastLink = {pos.idx, vv};
+	  if (lastLink.backLink->chainActions.len > 0) {
+	    actionsList.push (lastLink);
+	  }
+	  
+	}
+
+	int lastActionIndex = -1;
+	int lastResetPos = -1;
+	for (int i = actionsList.length - 1; i >= 0; i--) {
+	  auto &actions = actionsList[i];	 
+
+	  for (unsigned int actInd = 0; actInd < actions.backLink->chainActions.len; actInd++){
+	    auto &action = actions.backLink->chainActions[actInd];
+	    if ((int)action.chainId == lastfinal)
+	    {
+	      if (action.lookup == 0xFFFF)
+	      {
+		lastResetPos = actions.idx;
+		//printf ("Reset found at position %d\n", actions.idx);
+	      }
+	      else
+	      {
+		//unsigned int lookupIndex = action.lookup;
+		/* printf ("Lookup %d executed at position %d\n", lookupIndex,
+			actions.idx);*/
+
+		if (unlikely (!buffer->move_to (actions.idx))) break;
+
+		//if (unlikely (buffer->max_ops <= 0)) break;
+
+		/* unsigned int orig_len =
+		    buffer->backtrack_len () + buffer->lookahead_len ();*/
+		/** TODO generalize to all lookups (supports only expansion lookup which does not change string length) see  apply_lookup
+		* Need to describe what happens when a lookup changes the length of the processed string
+		* (see https://github.com/OpenType/opentype-layout/blob/master/proposals/complex_contextual.md)
+		**/
+		//auto ret = c->recurse (lookupIndex);
+		
+	      }
+	      lastActionIndex = actions.idx;
+	    }
+	  }
+
+	}
+	
+	int nextIndex = lastResetPos != -1 ? lastResetPos + 1
+	    : lastActionIndex != -1 ? lastActionIndex + 1
+				  : lastPosition + 1;
+	 buffer->move_to (nextIndex);	  
+      }
+      else {
+	      //advance next character
+	      buffer->move_to (lastPosition + 1);	  
+      }
+
+      restart = true;
+      
+    }
+    return ret;
+
+    
   }
 
   bool subset (hb_subset_context_t *c) const
@@ -3491,8 +3786,19 @@ struct FSMFormat1
     return true;
   }
 
-  private:
-  Coverage coverage;
+  protected:
+  HBUINT16 format;	       /* Format identifier-format = 1 */
+  OffsetTo<Coverage> coverage; /* Offset to Coverage table--from
+				* beginning of Substitution table */
+  OffsetTo<ClassDef> classDef; /* class table for glyphids to be matched, relative to the start of the subtable */
+  HBUINT8 maxBackup;	       /* Maximum string backup for matching */
+  HBUINT8 minBackup;	       /* Minimum string backup */
+  HBUINT8 maxLoop;	       /* Maximum number of iterations before progress must have been made */
+  HBUINT8 reserved; /* reserved */
+  UnsizedArrayOf<HBUINT16> backupNode;	/* Array of maxBackup - minBackup + 1 ChainNode references */
+  LOffsetArrayOf<ChainNode> chainNodes; /* Array of offsets to ChainNodes */
+  public:
+  DEFINE_SIZE_UNBOUNDED (10);
 };
 
 struct FSM
