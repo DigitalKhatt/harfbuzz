@@ -3735,7 +3735,7 @@ struct FSMFormat1
 	      }
 	      else
 	      {
-		//unsigned int lookupIndex = action.lookup;
+		unsigned int lookupIndex = action.lookup;
 		/* printf ("Lookup %d executed at position %d\n", lookupIndex,
 			actions.idx);*/
 
@@ -3749,7 +3749,7 @@ struct FSMFormat1
 		* Need to describe what happens when a lookup changes the length of the processed string
 		* (see https://github.com/OpenType/opentype-layout/blob/master/proposals/complex_contextual.md)
 		**/
-		//auto ret = c->recurse (lookupIndex);
+		c->recurse (lookupIndex);
 		
 	      }
 	      lastActionIndex = actions.idx;
