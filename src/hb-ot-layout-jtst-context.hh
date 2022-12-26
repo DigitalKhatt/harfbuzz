@@ -21,8 +21,7 @@
 #define HB_OT_LAYOUT_JTST_CONTEXT_HH
 
 
-#include <unordered_map>
-#include <map>
+
 #include <vector>
 
 #include "hb.hh"
@@ -37,6 +36,7 @@ enum class StartEndLig { StartEnd, Start, End, EndKashida };
 
 struct GlyphExpansion
 {
+  unsigned int index = 0;
   float MinLeftTatweel = 0.0;
   float MaxLeftTatweel = 0.0;
   float MinRightTatweel = 0.0;
@@ -57,9 +57,9 @@ class JustificationContext
   const int MAXSPACEWIDTH = 100;*/
 
 
-  std::vector<unsigned int> GlyphsToExtend;
+  std::vector<GlyphExpansion> GlyphsToExtend;
   std::vector<unsigned int> Substitutes;
-  std::unordered_map<unsigned int, GlyphExpansion> Expansions;
+  //std::unordered_map<unsigned int, GlyphExpansion> Expansions;
   int totalWeight = 0;
 
   JustificationContext (hb_font_t *font);
@@ -68,7 +68,7 @@ class JustificationContext
   {
     GlyphsToExtend.clear ();
     Substitutes.clear ();
-    Expansions.clear ();
+    //Expansions.clear ();
     totalWeight = 0;
   }
 

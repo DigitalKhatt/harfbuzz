@@ -313,7 +313,7 @@ struct SingleSubstFormat10
 #ifndef HB_NO_JUSTIFICATION
     if (c->buffer->justContext != nullptr) {
       OT::JustificationContext &justContext = *c->buffer->justContext;
-      justContext.GlyphsToExtend.push_back (c->buffer->idx);
+      //justContext.GlyphsToExtend.push_back (c->buffer->idx);
       justContext.Substitutes.push_back (substitute[index].substitute);
 
       OT::GlyphExpansion expa;
@@ -326,8 +326,10 @@ struct SingleSubstFormat10
       expa.startEndLig = (StartEndLig) (substitute[index].flags & 7);
       expa.stretchIsAbsolute = substitute[index].flags & 8;
       expa.shrinkIsAbsolute = substitute[index].flags & 16;
+      expa.index = c->buffer->idx;
 
-      justContext.Expansions.insert ({c->buffer->idx, expa});
+      //justContext.Expansions.insert ({c->buffer->idx, expa});
+      justContext.GlyphsToExtend.push_back (expa);
       justContext.totalWeight += expa.weight;
     }    
 #endif

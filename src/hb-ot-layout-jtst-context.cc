@@ -62,8 +62,6 @@ JustificationContext::justify (int &diff,
 
   bool stretch = diff > 0;
 
-  std::map<int, GlyphExpansion> affectedIndexes;
-
   bool insideGroup = false;
   hb_position_t totalCurrentWidth = 0;
   hb_position_t totalNextWidth = 0;
@@ -74,16 +72,20 @@ JustificationContext::justify (int &diff,
   remaining = false;
   remainingWidth = 0.0;
 
-  std::vector<unsigned int> NewGlyphsToExtend;
+  std::vector<GlyphExpansion*> NewGlyphsToExtend;
 
   double totalExpansion = 0.0;
 
   for (unsigned int i = 0; i < this->GlyphsToExtend.size (); i++)
   {
 
-    int index = this->GlyphsToExtend[i];
+    //int index = this->GlyphsToExtend[i];
 
-    GlyphExpansion &expa = this->Expansions[index];
+    //GlyphExpansion &expa = this->Expansions[index];
+
+    GlyphExpansion &expa = this->GlyphsToExtend[i];
+
+    unsigned int index = expa.index;
 
     // TODO: Need only IsAbsolute
     //   All values ares used for stretching if strech or shrinking if shrink
@@ -186,15 +188,19 @@ JustificationContext::justify (int &diff,
       totalExpansion += maxExpansion;
       for (int i : group)
       {
-	int index = this->GlyphsToExtend[i];
-	GlyphExpansion &expa = this->Expansions[index];
+	//int index = this->GlyphsToExtend[i];
+	//GlyphExpansion &expa = this->Expansions[index];
+
+	GlyphExpansion &expa = this->GlyphsToExtend[i];
+
+	unsigned int index = expa.index;
 
 	glyph_info[index].codepoint = this->Substitutes[i];
 
 	glyph_info[index].lefttatweel += expa.MinLeftTatweel;
 	glyph_info[index].righttatweel += expa.MinRightTatweel;
 
-	NewGlyphsToExtend.push_back (index);
+	NewGlyphsToExtend.push_back (&expa);
       }
     }
 
@@ -241,12 +247,16 @@ JustificationContext::justify (int &diff,
   for (unsigned int i = 0; i < NewGlyphsToExtend.size (); i++)
   {
 
-    int index = NewGlyphsToExtend[i];
+    //int index = NewGlyphsToExtend[i];
 
-    GlyphExpansion &expa = this->Expansions[index];
+    //GlyphExpansion &expa = this->GlyphsToExtend[index];
 
-    glyph_info[index].lefttatweel += expa.MaxLeftTatweel * ratio;
-    glyph_info[index].righttatweel += expa.MaxRightTatweel * ratio;
+    GlyphExpansion *expa = NewGlyphsToExtend[i];
+
+    unsigned int index = expa->index;
+
+    glyph_info[index].lefttatweel += expa->MaxLeftTatweel * ratio;
+    glyph_info[index].righttatweel += expa->MaxRightTatweel * ratio;
   }
 }
 
