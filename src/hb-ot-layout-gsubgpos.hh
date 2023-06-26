@@ -4152,8 +4152,7 @@ struct hb_ot_layout_lookup_accelerator_t
     {
       // VisualMetaFont
       c->subtable_index = i;
-      if (subtables[i].apply (c))
-	return true;
+      if (subtables[i].apply (c)) return true;
     }
     return false;
 
@@ -4739,7 +4738,6 @@ struct FSM
     FSMFormat1 format1;
   } u;
 };
-
 
 } /* namespace OT */
 
