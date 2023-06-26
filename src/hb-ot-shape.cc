@@ -1228,6 +1228,9 @@ hb_ot_justify_line (hb_ot_shape_context_t *c)
   if (c->buffer->justifyLine && c->buffer->lineWidth != 0)
   {
 
+    unsigned int global_bit_shift = 8 * sizeof (hb_mask_t) - 1;
+    unsigned int global_bit_mask = 1u << global_bit_shift;
+
     const unsigned int table_index = 1u;
     // hb_ot_map_t::lookup_map_t *stagelookups = nullptr;
 
@@ -1294,13 +1297,17 @@ hb_ot_justify_line (hb_ot_shape_context_t *c)
 		OT::SubstLookup::template dispatch_recurse_func<
 		    OT::hb_ot_apply_context_t>);
 	    ac.set_lookup_index (lookup_index);
-	    ac.set_lookup_mask (2);
-	    ac.set_auto_zwj (1);
-	    ac.set_auto_zwnj (1);
+	    ac.set_lookup_mask (global_bit_mask, false);
+	    ac.set_auto_zwj (1,false);
+	    ac.set_auto_zwnj (1,false);
 
 	    needPosition = true;
 
 	    auto *tt = gsub->get_accel (lookup_index);
+	    const OT::Layout::GSUB_impl::SubstLookup &l = gsub->table->get_lookup (lookup_index);
+	   
+
+	    //auto ret = tt && tt->apply (&ac, l.get_subtable_count (), false);
 
 	    hb_ot_layout_substitute_lookup (
 		&ac,
@@ -1345,8 +1352,8 @@ hb_ot_justify_line (hb_ot_shape_context_t *c)
 	      if (stagelookups[il].index == lookup_index)
 	      {
 		auto &lookup = (hb_ot_map_t::lookup_map_t &) stagelookups[il];
-		lookup.mask = 0;
-		// stagelookups[il].mask = posMask;
+		lookup.mask = posMask;
+		//stagelookups[il].mask = posMask;
 	      }
 	    }
 	  }
