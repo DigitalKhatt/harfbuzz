@@ -1342,7 +1342,7 @@ struct Lookup
     }
     return_trace (c->default_return_value ());
   }
-  
+
   bool serialize (hb_serialize_context_t *c,
 		  unsigned int lookup_type,
 		  uint32_t lookup_props,

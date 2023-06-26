@@ -1217,6 +1217,4 @@ hb_font_funcs_set_substitution_func (hb_font_funcs_t *ffuncs,
 
 HB_END_DECLS
 
-
-
 #endif /* HB_FONT_H */
