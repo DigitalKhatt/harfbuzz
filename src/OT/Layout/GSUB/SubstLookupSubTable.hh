@@ -10,6 +10,7 @@
 #include "ChainContextSubst.hh"
 #include "ExtensionSubst.hh"
 #include "ReverseChainSingleSubst.hh"
+#include "FSMSubst.hh"
 
 namespace OT {
 namespace Layout {
@@ -30,6 +31,7 @@ struct SubstLookupSubTable
   ChainContextSubst             chainContext;
   ExtensionSubst                extension;
   ReverseChainSingleSubst       reverseChainContextSingle;
+  FSMSubst                      fsmSubst;
   } u;
   public:
   DEFINE_SIZE_MIN (0);
@@ -42,7 +44,8 @@ struct SubstLookupSubTable
     Context             = 5,
     ChainContext        = 6,
     Extension           = 7,
-    ReverseChainSingle  = 8
+    ReverseChainSingle  = 8,
+    FSM                 = 20,
   };
 
   template <typename context_t, typename ...Ts>
@@ -58,6 +61,7 @@ struct SubstLookupSubTable
     case ChainContext:          return_trace (u.chainContext.dispatch (c, std::forward<Ts> (ds)...));
     case Extension:             return_trace (u.extension.dispatch (c, std::forward<Ts> (ds)...));
     case ReverseChainSingle:    return_trace (u.reverseChainContextSingle.dispatch (c, std::forward<Ts> (ds)...));
+    case FSM:                   return_trace (u.fsmSubst.dispatch (c, std::forward<Ts> (ds)...));
     default:                    return_trace (c->default_return_value ());
     }
   }

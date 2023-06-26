@@ -39,22 +39,28 @@ namespace GPOS_impl {
 /* Out-of-class implementation for methods recursing */
 #ifndef HB_NO_OT_LAYOUT
 template <typename context_t>
-/*static*/ typename context_t::return_t PosLookup::dispatch_recurse_func (context_t *c, unsigned int lookup_index)
+/*static*/ typename context_t::return_t
+PosLookup::dispatch_recurse_func (context_t *c, unsigned int lookup_index)
 {
-  const PosLookup &l = c->face->table.GPOS.get_relaxed ()->table->get_lookup (lookup_index);
+  const PosLookup &l =
+      c->face->table.GPOS.get_relaxed ()->table->get_lookup (lookup_index);
   return l.dispatch (c);
 }
 
 template <>
 inline hb_closure_lookups_context_t::return_t
-PosLookup::dispatch_recurse_func<hb_closure_lookups_context_t> (hb_closure_lookups_context_t *c, unsigned this_index)
+PosLookup::dispatch_recurse_func<hb_closure_lookups_context_t> (
+    hb_closure_lookups_context_t *c, unsigned this_index)
 {
-  const PosLookup &l = c->face->table.GPOS.get_relaxed ()->table->get_lookup (this_index);
+  const PosLookup &l =
+      c->face->table.GPOS.get_relaxed ()->table->get_lookup (this_index);
   return l.closure_lookups (c, this_index);
 }
 
 template <>
-inline bool PosLookup::dispatch_recurse_func<hb_ot_apply_context_t> (hb_ot_apply_context_t *c, unsigned int lookup_index)
+inline bool
+PosLookup::dispatch_recurse_func<hb_ot_apply_context_t> (
+    hb_ot_apply_context_t *c, unsigned int lookup_index)
 {
   auto *gpos = c->face->table.GPOS.get_relaxed ();
   const PosLookup &l = gpos->table->get_lookup (lookup_index);
@@ -76,6 +82,5 @@ inline bool PosLookup::dispatch_recurse_func<hb_ot_apply_context_t> (hb_ot_apply
 } /* namespace GPOS_impl */
 } /* namespace Layout */
 } /* namespace OT */
-
 
 #endif /* HB_OT_LAYOUT_GPOS_TABLE_HH */

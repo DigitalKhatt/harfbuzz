@@ -4,6 +4,8 @@
 #include "Common.hh"
 #include "SingleSubstFormat1.hh"
 #include "SingleSubstFormat2.hh"
+#include "SingleSubstFormat10.hh"
+#include "SingleSubstFormat11.hh"
 
 namespace OT {
 namespace Layout {
@@ -20,6 +22,8 @@ struct SingleSubst
   SingleSubstFormat1_3<MediumTypes>	format3;
   SingleSubstFormat2_4<MediumTypes>	format4;
 #endif
+  SingleSubstFormat10                   format10; // VisualMetaFont
+  SingleSubstFormat11                   format11; // VisualMetaFont
   } u;
 
   public:
@@ -36,6 +40,12 @@ struct SingleSubst
     case 3: return_trace (c->dispatch (u.format3, std::forward<Ts> (ds)...));
     case 4: return_trace (c->dispatch (u.format4, std::forward<Ts> (ds)...));
 #endif
+    case 10:
+      return_trace (
+	  c->dispatch (u.format10, std::forward<Ts> (ds)...)); // VisualMetaFont
+    case 11:
+      return_trace (
+	  c->dispatch (u.format11, std::forward<Ts> (ds)...)); // VisualMetaFont
     default:return_trace (c->default_return_value ());
     }
   }
@@ -85,6 +95,8 @@ struct SingleSubst
                                                delta));
     case 4: return_trace (u.format4.serialize (c, glyphs));
 #endif
+    case 10: return_trace (u.format10.serialize (c, glyphs)); // VisualMetaFont
+    case 11: return_trace (u.format11.serialize (c, glyphs)); // VisualMetaFont
     default:return_trace (false);
     }
   }

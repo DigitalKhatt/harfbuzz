@@ -3,6 +3,7 @@
 
 #include "SinglePosFormat1.hh"
 #include "SinglePosFormat2.hh"
+#include "SinglePosFormat3.hh"
 
 namespace OT {
 namespace Layout {
@@ -15,6 +16,8 @@ struct SinglePos
   HBUINT16              format;         /* Format identifier */
   SinglePosFormat1      format1;
   SinglePosFormat2      format2;
+  // VisualMetaFont
+  SinglePosFormat3      format3;
   } u;
 
   public:
@@ -77,6 +80,8 @@ struct SinglePos
     switch (u.format) {
     case 1: return_trace (c->dispatch (u.format1, std::forward<Ts> (ds)...));
     case 2: return_trace (c->dispatch (u.format2, std::forward<Ts> (ds)...));
+      // VisualMetaFont
+    case 3: return_trace (c->dispatch (u.format3, std::forward<Ts> (ds)...));
     default:return_trace (c->default_return_value ());
     }
   }

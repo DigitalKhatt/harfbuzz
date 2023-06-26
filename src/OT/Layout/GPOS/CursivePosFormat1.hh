@@ -149,8 +149,86 @@ struct CursivePosFormat1
 
     buffer->unsafe_to_break (i, j + 1);
     float entry_x, entry_y, exit_x, exit_y;
-    (this+prev_record.exitAnchor).get_anchor (c, buffer->info[i].codepoint, &exit_x, &exit_y);
-    (this+this_record.entryAnchor).get_anchor (c, buffer->info[j].codepoint, &entry_x, &entry_y);
+#ifndef HB_NO_JUSTIFICATION
+    // VisualMetaFont
+    if (buffer->info[i].lefttatweel != 0 || buffer->info[i].righttatweel != 0)
+    {
+      if (buffer->useCallback || c->font->num_coords != 0)
+      {
+	hb_cursive_anchor_context_t anchor_context;
+	anchor_context.glyph_id = buffer->info[i].codepoint;
+	anchor_context.lookup_index = c->lookup_index;
+	anchor_context.subtable_index = c->subtable_index;
+	anchor_context.lefttatweel = buffer->info[i].lefttatweel;
+	anchor_context.righttatweel = buffer->info[i].righttatweel;
+	anchor_context.type = hb_cursive_anchor_context_t::exit;
+	hb_position_t xCoordinate;
+	hb_position_t yCoordinate;
+	c->font->get_cursive_anchor (&anchor_context, &xCoordinate,
+				     &yCoordinate);
+	exit_x = c->font->em_fscale_x (xCoordinate);
+	exit_y = c->font->em_fscale_y (yCoordinate);
+      }
+      else
+      {
+	/* TODO Merge with existing instance . */
+	int coords[2];
+	coords[0] = roundf (buffer->info[i].lefttatweel * 16384.f);
+	coords[1] = roundf (buffer->info[i].righttatweel * 16384.f);
+	c->font->num_coords = 2;
+	c->font->coords = &coords[0];
+	(this + prev_record.exitAnchor)
+	    .get_anchor (c, buffer->info[i].codepoint, &exit_x, &exit_y);
+	c->font->num_coords = 0;
+	c->font->coords = nullptr;
+      }
+    }
+    else
+    {
+      (this + prev_record.exitAnchor)
+	  .get_anchor (c, buffer->info[i].codepoint, &exit_x, &exit_y);
+    }
+
+    if (buffer->info[j].lefttatweel != 0 || buffer->info[j].righttatweel != 0)
+    {
+      if (buffer->useCallback || c->font->num_coords != 0)
+      {
+	hb_cursive_anchor_context_t anchor_context;
+	anchor_context.glyph_id = buffer->info[j].codepoint;
+	anchor_context.lookup_index = c->lookup_index;
+	anchor_context.subtable_index = c->subtable_index;
+	anchor_context.lefttatweel = buffer->info[j].lefttatweel;
+	anchor_context.righttatweel = buffer->info[j].righttatweel;
+	anchor_context.type = hb_cursive_anchor_context_t::entry;
+	hb_position_t xCoordinate;
+	hb_position_t yCoordinate;
+	c->font->get_cursive_anchor (&anchor_context, &xCoordinate,
+				     &yCoordinate);
+	entry_x = c->font->em_fscale_x (xCoordinate);
+	entry_y = c->font->em_fscale_y (yCoordinate);
+      }
+      else
+      {
+	/* TODO Merge with existing instance . */
+	int coords[2];
+	coords[0] = roundf (buffer->info[j].lefttatweel * 16384.f);
+	coords[1] = roundf (buffer->info[j].righttatweel * 16384.f);
+	c->font->num_coords = 2;
+	c->font->coords = &coords[0];
+	(this + this_record.entryAnchor)
+	    .get_anchor (c, buffer->info[j].codepoint, &entry_x, &entry_y);
+	c->font->num_coords = 0;
+	c->font->coords = nullptr;
+      }
+    }
+    else
+    {
+      (this + this_record.entryAnchor)
+	  .get_anchor (c, buffer->info[j].codepoint, &entry_x, &entry_y);
+    }
+#endif
+    //(this+prev_record.exitAnchor).get_anchor (c, buffer->info[i].codepoint, &exit_x, &exit_y);
+    //(this+this_record.entryAnchor).get_anchor (c, buffer->info[j].codepoint, &entry_x, &entry_y);
 
     hb_glyph_position_t *pos = buffer->pos;
 
@@ -246,6 +324,12 @@ struct CursivePosFormat1
     }
 
     buffer->idx++;
+
+    // VisualMetaFont
+    pos[j].lookup_index = c->lookup_index;
+    pos[j].subtable_index = c->subtable_index;
+    pos[j].base_codepoint = buffer->info[i].codepoint;
+
     return_trace (true);
   }
 

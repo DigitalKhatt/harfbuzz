@@ -10,6 +10,7 @@
 #include "ContextPos.hh"
 #include "ChainContextPos.hh"
 #include "ExtensionPos.hh"
+#include "FSMPos.hh"
 
 namespace OT {
 namespace Layout {
@@ -29,7 +30,8 @@ struct PosLookupSubTable
     MarkMark            = 6,
     Context             = 7,
     ChainContext        = 8,
-    Extension           = 9
+    Extension           = 9,
+    FSM                 = 20,
   };
 
   template <typename context_t, typename ...Ts>
@@ -46,6 +48,7 @@ struct PosLookupSubTable
     case Context:               return_trace (u.context.dispatch (c, std::forward<Ts> (ds)...));
     case ChainContext:          return_trace (u.chainContext.dispatch (c, std::forward<Ts> (ds)...));
     case Extension:             return_trace (u.extension.dispatch (c, std::forward<Ts> (ds)...));
+    case FSM:                   return_trace (u.fsmPos.dispatch (c, std::forward<Ts> (ds)...));
     default:                    return_trace (c->default_return_value ());
     }
   }
@@ -67,6 +70,7 @@ struct PosLookupSubTable
   ContextPos            context;
   ChainContextPos       chainContext;
   ExtensionPos          extension;
+  FSMPos                fsmPos;
   } u;
   public:
   DEFINE_SIZE_MIN (0);

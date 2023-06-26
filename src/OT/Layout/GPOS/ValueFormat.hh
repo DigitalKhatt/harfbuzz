@@ -107,6 +107,10 @@ struct ValueFormat : HBUINT16
       values++;
     }
 
+    // VisualMetaFont
+    glyph_pos.lookup_index = c->lookup_index;
+    glyph_pos.subtable_index = c->subtable_index;
+
     if (!has_device ()) return ret;
 
     bool use_x_device = font->x_ppem || font->num_coords;

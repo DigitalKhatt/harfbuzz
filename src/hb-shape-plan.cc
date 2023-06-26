@@ -401,7 +401,7 @@ _hb_shape_plan_execute_internal (hb_shape_plan_t    *shape_plan,
 
   assert (!hb_object_is_immutable (buffer));
 
-  buffer->assert_unicode ();
+  // VisualMetaFont buffer->assert_unicode ();
 
   if (unlikely (!hb_object_is_valid (shape_plan)))
     return false;
