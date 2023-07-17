@@ -263,7 +263,7 @@ hb_ot_get_glyph_h_advances (hb_font_t* font, void* font_data,
 	font->coords = &coords[0];
 	positions[i].x_advance =
 	    font->em_scale_x (hmtx.get_advance_with_var_unscaled (
-		*first_glyph, font, varStore_cache));
+		infos[i].codepoint, font, varStore_cache));
 	font->num_coords = 0;
 	font->coords = nullptr;
       }
@@ -271,7 +271,7 @@ hb_ot_get_glyph_h_advances (hb_font_t* font, void* font_data,
       {
 	positions[i].x_advance =
 	    font->em_scale_x (hmtx.get_advance_with_var_unscaled (
-		*first_glyph, font, varStore_cache));
+		infos[i].codepoint, font, varStore_cache));
       }
 #else
       *first_advance = font->em_scale_x (hmtx.get_advance_with_var_unscaled (*first_glyph, font, varStore_cache));

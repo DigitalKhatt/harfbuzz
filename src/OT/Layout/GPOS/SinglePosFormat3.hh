@@ -64,18 +64,33 @@ struct SinglePosFormat3
     return_trace (true);
   }
 
-  template <typename Iterator, hb_requires (hb_is_iterator (Iterator))>
-  void serialize (hb_serialize_context_t *c, Iterator it, ValueFormat valFormat)
+  template <typename Iterator,
+	    typename SrcLookup,
+	    hb_requires (hb_is_iterator (Iterator))>
+  void serialize (hb_serialize_context_t *c,
+		  const SrcLookup *src,
+		  Iterator it,
+		  ValueFormat newFormat,
+		  const hb_hashmap_t<unsigned, hb_pair_t<unsigned, int>>
+		      *layout_variation_idx_delta_map)
   {
-    if (unlikely (!c->extend_min (*this))) return;
-    if (unlikely (!c->check_assign (valueFormat, valFormat))) return;
-    if (unlikely (!c->check_assign (valueCount, it.len ()))) return;
+    auto out = c->extend_min (this);
+    if (unlikely (!out)) return;
+    if (unlikely (!c->check_assign (valueFormat, newFormat,
+				    HB_SERIALIZE_ERROR_INT_OVERFLOW)))
+      return;
+    if (unlikely (!c->check_assign (valueCount, it.len (),
+				    HB_SERIALIZE_ERROR_ARRAY_OVERFLOW)))
+      return;
 
-    for (auto iter : it) c->copy_all (iter.second);
+    +it | hb_map (hb_second) | hb_apply ([&] (hb_array_t<const Value> _) {
+      src->get_value_format ().copy_values (c, newFormat, src, &_,
+					    layout_variation_idx_delta_map);
+    });
 
     auto glyphs = +it | hb_map_retains_sorting (hb_first);
 
-    coverage.serialize (c, this).serialize (c, glyphs);
+    coverage.serialize_serialize (c, glyphs);
   }
 
   bool subset (hb_subset_context_t *c) const

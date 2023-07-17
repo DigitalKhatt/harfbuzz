@@ -65,7 +65,8 @@ typedef struct hb_glyph_info_t {
   hb_mask_t      mask;
   /*< public >*/
   uint32_t       cluster;
-  // VisualMetaFont  
+  // VisualMetaFont
+  unsigned int lookup_index;
   unsigned int subtable_index;
   hb_codepoint_t base_codepoint;
 
@@ -203,7 +204,7 @@ typedef struct hb_glyph_position_t {
   // VisualMetaFont
   unsigned int lookup_index;
   unsigned int subtable_index;
-  hb_codepoint_t base_codepoint; 
+  hb_codepoint_t base_codepoint;
   /*< private >*/
   hb_var_int_t   var;
   // VisualMetaFont
@@ -435,9 +436,9 @@ hb_buffer_get_flags (const hb_buffer_t *buffer);
  * @HB_BUFFER_CLUSTER_LEVEL_CHARACTERS: Don't group cluster values.
  * @HB_BUFFER_CLUSTER_LEVEL_DEFAULT: Default cluster level,
  *   equal to @HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES.
- * 
+ *
  * Data type for holding HarfBuzz's clustering behavior options. The cluster level
- * dictates one aspect of how HarfBuzz will treat non-base characters 
+ * dictates one aspect of how HarfBuzz will treat non-base characters
  * during shaping.
  *
  * In @HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES, non-base
