@@ -1300,8 +1300,7 @@ hb_ot_justify_line (hb_ot_shape_context_t *c)
 	    needPosition = true;
 
 	    auto *tt = gsub->get_accel (lookup_index);
-	    const OT::Layout::GSUB_impl::SubstLookup &l =
-		gsub->table->get_lookup (lookup_index);
+
 
 	    // auto ret = tt && tt->apply (&ac, l.get_subtable_count (), false);
 

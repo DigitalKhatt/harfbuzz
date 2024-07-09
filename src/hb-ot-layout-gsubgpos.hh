@@ -4707,7 +4707,6 @@ struct FSMFormat1
 
   // return false;
 
-  bool ret = false;
   hb_buffer_t *buffer = c->buffer;
   // int furthestPointReached  = 0;
   // int nbIterWithoutAdvance = 0;
