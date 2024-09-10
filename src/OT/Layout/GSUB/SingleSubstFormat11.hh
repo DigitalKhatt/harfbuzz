@@ -2,27 +2,13 @@
 #define OT_LAYOUT_GSUB_SINGLESUBSTFORMAT11_HH
 
 #include "Common.hh"
+#include "GlyphWithTatweels.hh"
 
 namespace OT {
 namespace Layout {
 namespace GSUB_impl {
 
 // Added for VisualMetaFont
-struct AdjustTatweel
-{
-  bool sanitize (hb_sanitize_context_t *c) const
-  {
-    TRACE_SANITIZE (this);
-    return_trace (likely (c->check_struct (this)));
-  }
-
-  HBGlyphID16 substitute;
-  F16DOT16 leftTatweel;
-  F16DOT16 rightTatweel;
-
-  public:
-  DEFINE_SIZE_STATIC (10);
-};
 
 // Added for VisualMetaFont (substitute with expansion)
 struct SingleSubstFormat11
@@ -130,7 +116,7 @@ struct SingleSubstFormat11
   HBUINT16 format;	       /* Format identifier--format = 2 */
   Offset16To<Coverage> coverage; /* Offset to Coverage table--from
 				* beginning of Substitution table */
-  Array16Of<AdjustTatweel> tatweel;
+  Array16Of<GlyphWithTatweels> tatweel;
 
   public:
   DEFINE_SIZE_ARRAY (6, tatweel);

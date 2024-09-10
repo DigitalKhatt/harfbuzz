@@ -2,6 +2,7 @@
 #define OT_LAYOUT_GSUB_ALTERNATESUBST_HH
 
 #include "AlternateSubstFormat1.hh"
+#include "AlternateSubstFormat10.hh"
 #include "Common.hh"
 
 namespace OT {
@@ -14,6 +15,7 @@ struct AlternateSubst
   union {
   HBUINT16				format;         /* Format identifier */
   AlternateSubstFormat1_2<SmallTypes>	format1;
+  AlternateSubstFormat10		format10;
 #ifndef HB_NO_BEYOND_64K
   AlternateSubstFormat1_2<MediumTypes>	format2;
 #endif
@@ -30,6 +32,7 @@ struct AlternateSubst
 #ifndef HB_NO_BEYOND_64K
     case 2: return_trace (c->dispatch (u.format2, std::forward<Ts> (ds)...));
 #endif
+    case 10: return_trace (c->dispatch (u.format10, std::forward<Ts> (ds)...));
     default:return_trace (c->default_return_value ());
     }
   }
