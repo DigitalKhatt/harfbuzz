@@ -204,8 +204,11 @@ hb_ot_get_glyph_h_advances (hb_font_t* font, void* font_data,
   const hb_ot_face_t *ot_face = ot_font->ot_face;
   const OT::hmtx_accelerator_t &hmtx = *ot_face->hmtx;
 #ifndef HB_NO_JUSTIFICATION
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-align"
   auto infos = (hb_glyph_info_t *) (first_glyph);
   auto positions = (hb_glyph_position_t *) (first_advance);
+#pragma GCC diagnostic pop
 #endif
 
   hb_position_t *orig_first_advance = first_advance;

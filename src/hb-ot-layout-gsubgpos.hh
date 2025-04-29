@@ -4729,7 +4729,7 @@ struct FSMFormat1
 
 	if (classIndex == 0)
 	{
-	  buffer->next_glyph ();
+      (void) buffer->next_glyph ();
 	  continue;
 	}
 
@@ -4747,7 +4747,7 @@ struct FSMFormat1
 
 	if (skippy_iter.idx < minBackup)
 	{
-	  buffer->next_glyph ();
+      (void) buffer->next_glyph ();
 	  continue;
 	}
 
@@ -4759,7 +4759,7 @@ struct FSMFormat1
 
 	lastPosition = buffer->idx;
 
-	buffer->move_to (skippy_iter.idx);
+    (void) buffer->move_to (skippy_iter.idx);
 
 	accumulatedStates.reset ();
 
@@ -4812,7 +4812,7 @@ struct FSMFormat1
 	auto nexIdx = advanced_iter.idx + 1;
 	if (nexIdx < buffer->len)
 	{
-	  buffer->move_to (nexIdx);
+      (void) buffer->move_to (nexIdx);
 	  continue;
 	}
       }
@@ -4898,12 +4898,12 @@ struct FSMFormat1
 	int nextIndex = lastResetPos != -1	? lastResetPos + 1
 			: lastActionIndex != -1 ? lastActionIndex + 1
 						: lastPosition + 1;
-	buffer->move_to (nextIndex);
+    (void) buffer->move_to (nextIndex);
       }
       else
       {
 	// advance next character
-	buffer->move_to (lastPosition + 1);
+    (void) buffer->move_to (lastPosition + 1);
       }
 
       restart = true;
