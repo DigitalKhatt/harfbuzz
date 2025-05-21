@@ -56,9 +56,9 @@ JustificationContext::justify (int &diff,
 
   // int totalWeight = this->totalWeight;
 
-  bool remaining = true;
+  //bool remaining = true;
 
-  double remainingWidth = -1;
+  //double remainingWidth = -1;
 
   bool stretch = diff > 0;
 
@@ -69,8 +69,8 @@ JustificationContext::justify (int &diff,
   GlyphExpansion groupExpa{};
   groupExpa.weight = 0;
   std::vector<int> group;
-  remaining = false;
-  remainingWidth = 0.0;
+  //remaining = false;
+  //remainingWidth = 0.0;
 
   std::vector<GlyphExpansion*> NewGlyphsToExtend;
 
