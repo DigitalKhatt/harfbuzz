@@ -120,8 +120,31 @@ struct PairSet
 			    c->buffer->idx, pos);
       }
 
-      bool applied_first = len1 && valueFormats[0].apply_value (c, this, &record->values[0], buffer->cur_pos());
-      bool applied_second = len2 && valueFormats[1].apply_value (c, this, &record->values[len1], buffer->pos[pos]);
+       // VisualMetaFont
+       if (buffer->useCallback){
+        auto firstglyph_info = buffer->cur();
+        auto secondglyph_info = buffer->info[pos];
+        if ((len1 && (firstglyph_info.lefttatweel != 0 || firstglyph_info.righttatweel != 0))
+            || (len2 && (secondglyph_info.lefttatweel != 0 || secondglyph_info.righttatweel != 0))
+        )
+        {
+          hb_cursive_anchor_context_t anchor_context;
+          anchor_context.glyph_id = firstglyph_info.codepoint;
+          anchor_context.base_glyph_id = secondglyph_info.codepoint;
+          anchor_context.lookup_index = c->lookup_index;
+          anchor_context.subtable_index = c->subtable_index;
+          anchor_context.lefttatweel = firstglyph_info.lefttatweel;
+          anchor_context.righttatweel = firstglyph_info.righttatweel;
+          anchor_context.lefttatweel2 = secondglyph_info.lefttatweel;
+          anchor_context.righttatweel2 = secondglyph_info.righttatweel;
+          anchor_context.type = hb_cursive_anchor_context_t::pair;
+          anchor_context.data = (void*)&record->values[0];
+          c->font->get_cursive_anchor (&anchor_context, nullptr,nullptr);
+        }
+       }     
+
+    bool applied_first = len1 && valueFormats[0].apply_value (c, this, &record->values[0], buffer->cur_pos());
+    bool applied_second = len2 && valueFormats[1].apply_value (c, this, &record->values[len1], buffer->pos[pos]);
 
       if (applied_first || applied_second)
 	if (HB_BUFFER_MESSAGE_MORE && c->buffer->messaging ())
