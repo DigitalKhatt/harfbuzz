@@ -113,6 +113,11 @@ struct PairSet
                                                 record_size);
     if (record)
     {
+      const HBUINT16 *values = &record->values[0];
+#ifndef HB_NO_JUSTIFICATION
+      HBUINT16 callback_values[32];
+#endif
+
       if (HB_BUFFER_MESSAGE_MORE && c->buffer->messaging ())
       {
 	c->buffer->message (c->font,
@@ -120,14 +125,22 @@ struct PairSet
 			    c->buffer->idx, pos);
       }
 
+#ifndef HB_NO_JUSTIFICATION
        // VisualMetaFont
        if (buffer->useCallback){
         auto firstglyph_info = buffer->cur();
         auto secondglyph_info = buffer->info[pos];
-        if ((len1 && (firstglyph_info.lefttatweel != 0 || firstglyph_info.righttatweel != 0))
-            || (len2 && (secondglyph_info.lefttatweel != 0 || secondglyph_info.righttatweel != 0))
-        )
+        if ((len1 || len2) &&
+            (firstglyph_info.lefttatweel != 0 ||
+             firstglyph_info.righttatweel != 0 ||
+             secondglyph_info.lefttatweel != 0 ||
+             secondglyph_info.righttatweel != 0))
         {
+          unsigned value_len = len1 + len2;
+          if (unlikely (value_len > ARRAY_LENGTH (callback_values)))
+            return_trace (false);
+          memcpy (callback_values, values, value_len * sizeof (HBUINT16));
+
           hb_cursive_anchor_context_t anchor_context;
           anchor_context.glyph_id = firstglyph_info.codepoint;
           anchor_context.base_glyph_id = secondglyph_info.codepoint;
@@ -138,13 +151,15 @@ struct PairSet
           anchor_context.lefttatweel2 = secondglyph_info.lefttatweel;
           anchor_context.righttatweel2 = secondglyph_info.righttatweel;
           anchor_context.type = hb_cursive_anchor_context_t::pair;
-          anchor_context.data = (void*)&record->values[0];
+          anchor_context.data = callback_values;
           c->font->get_cursive_anchor (&anchor_context, nullptr,nullptr);
+          values = callback_values;
         }
-       }     
+       }
+#endif
 
-    bool applied_first = len1 && valueFormats[0].apply_value (c, this, &record->values[0], buffer->cur_pos());
-    bool applied_second = len2 && valueFormats[1].apply_value (c, this, &record->values[len1], buffer->pos[pos]);
+    bool applied_first = len1 && valueFormats[0].apply_value (c, this, values, buffer->cur_pos());
+    bool applied_second = len2 && valueFormats[1].apply_value (c, this, values + len1, buffer->pos[pos]);
 
       if (applied_first || applied_second)
 	if (HB_BUFFER_MESSAGE_MORE && c->buffer->messaging ())
