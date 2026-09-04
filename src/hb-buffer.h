@@ -65,17 +65,11 @@ typedef struct hb_glyph_info_t {
   hb_mask_t      mask;
   /*< public >*/
   uint32_t       cluster;
-  // VisualMetaFont
-  unsigned int lookup_index;
-  unsigned int subtable_index;
-  hb_codepoint_t base_codepoint;
-
   /*< private >*/
   hb_var_int_t   var1;
   hb_var_int_t   var2;
-  // VisualMetaFont
-  double lefttatweel;
-  double righttatweel;
+  /* Opaque VisualMetaFont instance state. Resolved by the owning client, not HB. */
+  uint32_t instance_id;
 } hb_glyph_info_t;
 
 /**
@@ -201,15 +195,10 @@ typedef struct hb_glyph_position_t {
   hb_position_t  x_offset;
   hb_position_t  y_offset;
 
-  // VisualMetaFont
-  unsigned int lookup_index;
-  unsigned int subtable_index;
-  hb_codepoint_t base_codepoint;
   /*< private >*/
   hb_var_int_t   var;
-  // VisualMetaFont
-  double lefttatweel;
-  double righttatweel;
+  /* Keep info/position allocation sizes equal; authoritative ID lives in info. */
+  uint32_t instance_id;
 } hb_glyph_position_t;
 
 /**

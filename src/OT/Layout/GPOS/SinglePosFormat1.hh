@@ -75,7 +75,7 @@ struct SinglePosFormat1
 			  c->buffer->idx);
     }
 
-    valueFormat.apply_value (c, this, values, buffer->cur_pos());
+    valueFormat.apply_value (c, this, values, buffer->cur_pos(), &buffer->cur());
 
     if (HB_BUFFER_MESSAGE_MORE && c->buffer->messaging ())
     {

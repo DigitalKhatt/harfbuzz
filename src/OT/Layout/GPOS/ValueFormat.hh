@@ -80,7 +80,8 @@ struct ValueFormat : HBUINT16
   bool apply_value (hb_ot_apply_context_t *c,
                     const void            *base,
                     const Value           *values,
-                    hb_glyph_position_t   &glyph_pos) const
+                    hb_glyph_position_t   &glyph_pos,
+                    hb_glyph_info_t       *glyph_info = nullptr) const
   {
     bool ret = false;
     unsigned int format = *this;
@@ -108,8 +109,12 @@ struct ValueFormat : HBUINT16
     }
 
     // VisualMetaFont
-    glyph_pos.lookup_index = c->lookup_index;
-    glyph_pos.subtable_index = c->subtable_index;
+    if (glyph_info) {
+      const auto previous = font->glyph_positioning (*glyph_info);
+      font->record_glyph_positioning (*glyph_info, c->lookup_index, c->subtable_index, previous.base_codepoint);
+    }
+    // Standalone queries and temporary kerning values have no instance; only
+    // their numeric positioning result is returned.
 
     if (!has_device ()) return ret;
 

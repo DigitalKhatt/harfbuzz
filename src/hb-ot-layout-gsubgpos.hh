@@ -866,6 +866,8 @@ struct hb_ot_apply_context_t :
       _hb_glyph_info_set_glyph_props (&buffer->cur(), props);
   }
 
+  // Instance state follows the same full-info copy semantics as the legacy
+  // tatweels: preserve on replacement, clone on split, first input on ligation.
   void replace_glyph (hb_codepoint_t glyph_index)
   {
     _set_glyph_class (glyph_index);

@@ -203,13 +203,6 @@ hb_ot_get_glyph_h_advances (hb_font_t* font, void* font_data,
   const hb_ot_font_t *ot_font = (const hb_ot_font_t *) font_data;
   const hb_ot_face_t *ot_face = ot_font->ot_face;
   const OT::hmtx_accelerator_t &hmtx = *ot_face->hmtx;
-#ifndef HB_NO_JUSTIFICATION
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-align"
-  auto infos = (hb_glyph_info_t *) (first_glyph);
-  auto positions = (hb_glyph_position_t *) (first_advance);
-#pragma GCC diagnostic pop
-#endif
 
   hb_position_t *orig_first_advance = first_advance;
 
@@ -256,31 +249,31 @@ hb_ot_get_glyph_h_advances (hb_font_t* font, void* font_data,
   {
     for (unsigned int i = 0; i < count; i++)
     {
+      auto *glyph_cache = varStore_cache;
 #ifndef HB_NO_JUSTIFICATION
-      if (infos[i].lefttatweel != 0.0 || infos[i].righttatweel != 0.0)
+      hb_glyph_tatweels_t tatweels{};
+      if (glyph_stride == sizeof (hb_glyph_info_t))
+        tatweels = font->glyph_tatweels (*reinterpret_cast<const hb_glyph_info_t *> (first_glyph));
+      auto *saved_coords = font->coords;
+      auto saved_num_coords = font->num_coords;
+      int coords[2];
+      if (tatweels.left != 0.0 || tatweels.right != 0.0)
       {
-	int coords[2];
-	coords[0] = roundf (infos[i].lefttatweel * 16384.f);
-	coords[1] = roundf (infos[i].righttatweel * 16384.f);
+        // A variation cache belongs to one coordinate vector, not every instance.
+        glyph_cache = nullptr;
+	coords[0] = roundf (tatweels.left * 16384.f);
+	coords[1] = roundf (tatweels.right * 16384.f);
 	font->num_coords = 2;
 	font->coords = &coords[0];
-	positions[i].x_advance =
-	    font->em_scale_x (hmtx.get_advance_with_var_unscaled (
-		infos[i].codepoint, font, varStore_cache));
-	font->num_coords = 0;
-	font->coords = nullptr;
       }
-      else
-      {
-	positions[i].x_advance =
-	    font->em_scale_x (hmtx.get_advance_with_var_unscaled (
-		infos[i].codepoint, font, varStore_cache));
-      }
-#else
-      *first_advance = font->em_scale_x (hmtx.get_advance_with_var_unscaled (*first_glyph, font, varStore_cache));
+#endif
+      *first_advance = font->em_scale_x (hmtx.get_advance_with_var_unscaled (*first_glyph, font, glyph_cache));
+#ifndef HB_NO_JUSTIFICATION
+      font->coords = saved_coords;
+      font->num_coords = saved_num_coords;
+#endif
       first_glyph = &StructAtOffsetUnaligned<hb_codepoint_t> (first_glyph, glyph_stride);
       first_advance = &StructAtOffsetUnaligned<hb_position_t> (first_advance, advance_stride);
-#endif
     }
   }
   else

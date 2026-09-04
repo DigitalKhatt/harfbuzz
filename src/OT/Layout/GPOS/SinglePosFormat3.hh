@@ -55,10 +55,8 @@ struct SinglePosFormat3
     auto p3 = *reinterpret_cast<const HBINT16 *> (mvalues++);
     auto p4 = *reinterpret_cast<const HBINT16 *> (mvalues);
 
-    buffer->cur_pos ().base_codepoint =
-	(p1 << 24) + (p2 << 16) + (p3 << 8) + p4;
-    buffer->cur_pos ().lookup_index = c->lookup_index;
-    buffer->cur_pos ().subtable_index = c->subtable_index;
+    c->font->record_glyph_positioning (buffer->cur (), c->lookup_index, c->subtable_index,
+                                      (p1 << 24) + (p2 << 16) + (p3 << 8) + p4);
 
     buffer->idx++;
     return_trace (true);

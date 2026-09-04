@@ -1919,6 +1919,21 @@ _hb_font_adopt_var_coords (hb_font_t *font,
   font->mults_changed (); // Easiest to call this to drop cached data
 }
 
+void
+hb_font_set_instance_func (hb_font_t *font, hb_font_instance_func_t func, void *user_data)
+{
+  if (hb_object_is_immutable (font)) return;
+  font->instance_callback = func;
+  font->instance_data = user_data;
+}
+
+hb_bool_t
+hb_font_access_instance (hb_font_t *font, hb_glyph_instance_operation_t operation,
+                         hb_glyph_info_t *info, void *payload)
+{
+  return info && font->access_instance (operation, *info, payload);
+}
+
 /**
  * hb_font_create_sub_font:
  * @parent: The parent font object

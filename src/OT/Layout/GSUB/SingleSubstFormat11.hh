@@ -58,8 +58,8 @@ struct SingleSubstFormat11
 
     auto &info = c->buffer->cur ();
 
-    info.lefttatweel += tat.leftTatweel.to_float ();
-    info.righttatweel += tat.rightTatweel.to_float ();
+    if (!c->font->add_glyph_tatweels (info, tat.leftTatweel.to_float (), tat.rightTatweel.to_float ()))
+      return_trace (false);
 
     c->replace_glyph (tat.substitute);
 

@@ -46,10 +46,8 @@ typedef struct hb_cursive_anchor_context_t
   enum Type { entry, exit, mark, base, pair };
   hb_codepoint_t glyph_id;
   hb_codepoint_t base_glyph_id;
-  double lefttatweel;
-  double righttatweel;
-  double lefttatweel2;
-  double righttatweel2;
+  uint32_t instance_id = 0;
+  uint32_t instance_id2 = 0;
   unsigned int lookup_index;
   unsigned int subtable_index;
   Type type;
@@ -154,6 +152,42 @@ DECLARE_NULL_INSTANCE (hb_font_funcs_t);
 struct hb_font_t
 {
   hb_object_header_t header;
+
+  bool access_instance (hb_glyph_instance_operation_t operation, hb_glyph_info_t &info, void *payload) {
+    for (auto *owner = this; owner; owner = owner->parent)
+      if (owner->instance_callback)
+        return owner->instance_callback (this, operation, &info, payload, owner->instance_data);
+    return false;
+  }
+  hb_glyph_tatweels_t glyph_tatweels (const hb_glyph_info_t &info) {
+    hb_glyph_tatweels_t value{};
+    // ID zero is neutral in every client store; no callback/parent search needed.
+    if (!info.instance_id) return value;
+    access_instance (HB_INSTANCE_READ_TATWEELS, const_cast<hb_glyph_info_t &>(info), &value);
+    return value;
+  }
+  bool set_glyph_tatweels (hb_glyph_info_t &info, double left, double right) {
+    hb_glyph_tatweels_t value{left, right};
+    return access_instance (HB_INSTANCE_WRITE_TATWEELS, info, &value);
+  }
+  bool add_glyph_tatweels (hb_glyph_info_t &info, double left, double right) {
+    auto value = glyph_tatweels (info);
+    return set_glyph_tatweels (info, value.left + left, value.right + right);
+  }
+  hb_glyph_provenance_t glyph_positioning (const hb_glyph_info_t &info) {
+    hb_glyph_provenance_t value{};
+    if (!info.instance_id) return value;
+    access_instance (HB_INSTANCE_READ_POSITIONING, const_cast<hb_glyph_info_t &>(info), &value);
+    return value;
+  }
+  void record_glyph_positioning (hb_glyph_info_t &info,
+                                unsigned lookup, unsigned subtable, hb_codepoint_t base) {
+    hb_glyph_provenance_t value{lookup, subtable, base};
+    access_instance (HB_INSTANCE_WRITE_POSITIONING, info, &value);
+  }
+  void clear_glyph_positioning (hb_glyph_info_t &info) {
+    if (info.instance_id) access_instance (HB_INSTANCE_CLEAR_POSITIONING, info, nullptr);
+  }
   unsigned int serial;
   unsigned int serial_coords;
 
@@ -193,6 +227,10 @@ struct hb_font_t
   hb_destroy_func_t  destroy;
 
   hb_shaper_object_dataset_t<hb_font_t> data; /* Various shaper data. */
+
+  // Internal, layout-local bridge. Custom parameter actions require a client.
+  hb_font_instance_func_t instance_callback;
+  void *instance_data;
 
 
   /* Convert from font-space to user-space */

@@ -79,7 +79,7 @@ struct SinglePosFormat2
 
     valueFormat.apply_value (c, this,
                              &values[index * valueFormat.get_len ()],
-                             buffer->cur_pos());
+                             buffer->cur_pos(), &buffer->cur());
 
     if (HB_BUFFER_MESSAGE_MORE && c->buffer->messaging ())
     {

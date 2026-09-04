@@ -93,13 +93,13 @@ JustificationContext::justify (int &diff,
 
     if (stretch && expa.stretchIsAbsolute || !stretch && expa.shrinkIsAbsolute)
     {
-      expa.MaxLeftTatweel = expa.MaxLeftTatweel - glyph_info[index].lefttatweel;
+      expa.MaxLeftTatweel = expa.MaxLeftTatweel - font->glyph_tatweels (glyph_info[index]).left;
       expa.MaxRightTatweel =
-	  expa.MaxRightTatweel - glyph_info[index].righttatweel;
+	  expa.MaxRightTatweel - font->glyph_tatweels (glyph_info[index]).right;
       expa.stretchIsAbsolute = false;
-      expa.MinLeftTatweel = expa.MinLeftTatweel - glyph_info[index].lefttatweel;
+      expa.MinLeftTatweel = expa.MinLeftTatweel - font->glyph_tatweels (glyph_info[index]).left;
       expa.MinRightTatweel =
-	  expa.MinRightTatweel - glyph_info[index].righttatweel;
+	  expa.MinRightTatweel - font->glyph_tatweels (glyph_info[index]).right;
       expa.shrinkIsAbsolute = false;
 
       if (stretch)
@@ -119,11 +119,7 @@ JustificationContext::justify (int &diff,
 
     group.push_back (i);
 
-    hb_glyph_info_t info;
-    info.codepoint = glyph_info[index].codepoint;
-
-    info.lefttatweel = glyph_info[index].lefttatweel;
-    info.righttatweel = glyph_info[index].righttatweel;
+    hb_glyph_info_t info = glyph_info[index];
 
     hb_position_t currentWidth = 0;
     hb_position_t nextWidth = 0;
@@ -143,16 +139,14 @@ JustificationContext::justify (int &diff,
     }
     else
     {
-      info.lefttatweel = glyph_info[index].lefttatweel + minLeft;
-      info.righttatweel = glyph_info[index].righttatweel + minRight;
+      if (!font->add_glyph_tatweels (info, minLeft, minRight)) { buffer->successful = false; return; }
 
       font->get_glyph_h_advances (1, &info.codepoint, sizeof (info), &nextWidth,
 				  0);
     }
     auto expaLeft = expa.MaxLeftTatweel;
     auto expaRight = expa.MaxRightTatweel;
-    info.lefttatweel += expaLeft;
-    info.righttatweel += expaRight;
+    if (!font->add_glyph_tatweels (info, expaLeft, expaRight)) { buffer->successful = false; return; }
 
     font->get_glyph_h_advances (1, &info.codepoint, sizeof (info), &maxWidth,
 				0);
@@ -196,8 +190,7 @@ JustificationContext::justify (int &diff,
 
 	glyph_info[index].codepoint = this->Substitutes[i];
 
-	glyph_info[index].lefttatweel += expa.MinLeftTatweel;
-	glyph_info[index].righttatweel += expa.MinRightTatweel;
+	if (!font->add_glyph_tatweels (glyph_info[index], expa.MinLeftTatweel, expa.MinRightTatweel)) { buffer->successful = false; return; }
 
 	NewGlyphsToExtend.push_back (&expa);
       }
@@ -254,8 +247,7 @@ JustificationContext::justify (int &diff,
 
     unsigned int index = expa->index;
 
-    glyph_info[index].lefttatweel += expa->MaxLeftTatweel * ratio;
-    glyph_info[index].righttatweel += expa->MaxRightTatweel * ratio;
+    if (!font->add_glyph_tatweels (glyph_info[index], expa->MaxLeftTatweel * ratio, expa->MaxRightTatweel * ratio)) { buffer->successful = false; return; }
   }
 }
 

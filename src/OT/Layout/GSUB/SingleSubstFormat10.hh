@@ -112,7 +112,9 @@ struct SingleSubstFormat10
 
     auto result = c->font->get_substitution (&substitution_context);
 
-    if (result) c->replace_glyph (substitute[index].substitute);
+    if (result) {
+      c->replace_glyph (substitute[index].substitute);
+    }
 
     return_trace (result);
   }

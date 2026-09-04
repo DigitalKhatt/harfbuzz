@@ -38,6 +38,37 @@
 
 HB_BEGIN_DECLS
 
+typedef struct hb_glyph_info_t hb_glyph_info_t;
+
+/* VisualMetaFont: the client owns immutable instance states. The callback may
+ * replace info->instance_id; read operations must not modify info. IDs must be
+ * meaningful to every font/buffer sharing the client's store. */
+typedef enum {
+  HB_INSTANCE_READ_TATWEELS, HB_INSTANCE_WRITE_TATWEELS,
+  HB_INSTANCE_READ_POSITIONING, HB_INSTANCE_WRITE_POSITIONING,
+  HB_INSTANCE_CLEAR_POSITIONING
+} hb_glyph_instance_operation_t;
+typedef struct {
+  double left, right;
+  hb_bool_t native_parameters;
+} hb_glyph_tatweels_t;
+typedef struct {
+  unsigned lookup_index, subtable_index;
+  hb_codepoint_t base_codepoint;
+} hb_glyph_provenance_t;
+typedef hb_bool_t (*hb_font_instance_func_t) (hb_font_t *font,
+    hb_glyph_instance_operation_t operation, hb_glyph_info_t *info,
+    void *payload, void *user_data);
+
+/* user_data is borrowed and must outlive the font and its subfonts. Subfonts
+ * inherit the closest registered callback; NULL removes a local override. */
+HB_EXTERN void
+hb_font_set_instance_func (hb_font_t *font, hb_font_instance_func_t func,
+                           void *user_data);
+HB_EXTERN hb_bool_t
+hb_font_access_instance (hb_font_t *font, hb_glyph_instance_operation_t operation,
+                         hb_glyph_info_t *info, void *payload);
+
 /*
  * hb_font_funcs_t
  */

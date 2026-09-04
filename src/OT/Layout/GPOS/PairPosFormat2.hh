@@ -229,8 +229,8 @@ struct PairPosFormat2_4
 			  c->buffer->idx, skippy_iter.idx);
     }
 
-    applied_first = len1 && valueFormat1.apply_value (c, this, v, buffer->cur_pos());
-    applied_second = len2 && valueFormat2.apply_value (c, this, v + len1, buffer->pos[skippy_iter.idx]);
+    applied_first = len1 && valueFormat1.apply_value (c, this, v, buffer->cur_pos(), &buffer->cur());
+    applied_second = len2 && valueFormat2.apply_value (c, this, v + len1, buffer->pos[skippy_iter.idx], &buffer->info[skippy_iter.idx]);
 
     if (applied_first || applied_second)
       if (HB_BUFFER_MESSAGE_MORE && c->buffer->messaging ())

@@ -38,31 +38,35 @@ struct MarkArray : Array16Of<MarkRecord>        /* Array of MarkRecords--in Cove
     buffer->unsafe_to_break (glyph_pos, buffer->idx + 1);
     // VisualMetaFont
     auto infomark = buffer->cur ();
-    if (infomark.lefttatweel != 0 || infomark.righttatweel != 0)
+    const auto markTatweels = c->font->glyph_tatweels (infomark);
+    const auto baseTatweels = c->font->glyph_tatweels (buffer->info[glyph_pos]);
+    if (markTatweels.native_parameters || markTatweels.left != 0 || markTatweels.right != 0)
     {
-      if (buffer->useCallback || c->font->num_coords != 0)
+      if (markTatweels.native_parameters || buffer->useCallback || c->font->num_coords != 0)
       {
 	hb_cursive_anchor_context_t anchor_context;
 	anchor_context.glyph_id = buffer->cur ().codepoint;
+	anchor_context.instance_id = infomark.instance_id;
 	anchor_context.base_glyph_id = buffer->info[glyph_pos].codepoint;
 	anchor_context.lookup_index = c->lookup_index;
 	anchor_context.subtable_index = c->subtable_index;
-	anchor_context.lefttatweel = infomark.lefttatweel;
-	anchor_context.righttatweel = infomark.righttatweel;
 	anchor_context.type = hb_cursive_anchor_context_t::mark;
 	hb_position_t xCoordinate;
 	hb_position_t yCoordinate;
-	c->font->get_cursive_anchor (&anchor_context, &xCoordinate,
-				     &yCoordinate);
-	mark_x = c->font->em_fscale_x (xCoordinate);
-	mark_y = c->font->em_fscale_y (yCoordinate);
+	if (c->font->get_cursive_anchor (&anchor_context, &xCoordinate, &yCoordinate))
+	{
+	  mark_x = c->font->em_fscale_x (xCoordinate);
+	  mark_y = c->font->em_fscale_y (yCoordinate);
+	}
+	else
+	  mark_anchor.get_anchor (c, buffer->cur ().codepoint, &mark_x, &mark_y);
       }
       else
       {
 	/* TODO Merge with existing instance . */
 	int coords[2];
-	coords[0] = roundf (infomark.lefttatweel * 16384.f);
-	coords[1] = roundf (infomark.righttatweel * 16384.f);
+	coords[0] = roundf (markTatweels.left * 16384.f);
+	coords[1] = roundf (markTatweels.right * 16384.f);
 	c->font->num_coords = 2;
 	c->font->coords = &coords[0];
 	mark_anchor.get_anchor (c, buffer->cur ().codepoint, &mark_x, &mark_y);
@@ -76,32 +80,33 @@ struct MarkArray : Array16Of<MarkRecord>        /* Array of MarkRecords--in Cove
     }
 
     // VisualMetaFont
-    if (buffer->info[glyph_pos].lefttatweel != 0 ||
-	buffer->info[glyph_pos].righttatweel != 0)
+    if (baseTatweels.native_parameters || baseTatweels.left != 0 || baseTatweels.right != 0)
     {
-      if (buffer->useCallback || c->font->num_coords != 0)
+      if (baseTatweels.native_parameters || buffer->useCallback || c->font->num_coords != 0)
       {
 	hb_cursive_anchor_context_t anchor_context;
 	anchor_context.glyph_id = buffer->cur ().codepoint;
 	anchor_context.base_glyph_id = buffer->info[glyph_pos].codepoint;
 	anchor_context.lookup_index = c->lookup_index;
 	anchor_context.subtable_index = c->subtable_index;
-	anchor_context.lefttatweel = buffer->info[glyph_pos].lefttatweel;
-	anchor_context.righttatweel = buffer->info[glyph_pos].righttatweel;
+	anchor_context.instance_id = buffer->info[glyph_pos].instance_id;
 	anchor_context.type = hb_cursive_anchor_context_t::base;
 	hb_position_t xCoordinate;
 	hb_position_t yCoordinate;
-	c->font->get_cursive_anchor (&anchor_context, &xCoordinate,
-				     &yCoordinate);
-	base_x = c->font->em_fscale_x (xCoordinate);
-	base_y = c->font->em_fscale_y (yCoordinate);
+	if (c->font->get_cursive_anchor (&anchor_context, &xCoordinate, &yCoordinate))
+	{
+	  base_x = c->font->em_fscale_x (xCoordinate);
+	  base_y = c->font->em_fscale_y (yCoordinate);
+	}
+	else
+	  glyph_anchor.get_anchor (c, buffer->info[glyph_pos].codepoint, &base_x, &base_y);
       }
       else
       {
 	/* TODO Merge with existing instance . */
 	int coords[2];
-	coords[0] = roundf (buffer->info[glyph_pos].lefttatweel * 16384.f);
-	coords[1] = roundf (buffer->info[glyph_pos].righttatweel * 16384.f);
+	coords[0] = roundf (baseTatweels.left * 16384.f);
+	coords[1] = roundf (baseTatweels.right * 16384.f);
 	c->font->num_coords = 2;
 	c->font->coords = &coords[0];
 	glyph_anchor.get_anchor (c, buffer->info[glyph_pos].codepoint, &base_x,
@@ -133,9 +138,7 @@ struct MarkArray : Array16Of<MarkRecord>        /* Array of MarkRecords--in Cove
     o.attach_chain() = (int) glyph_pos - (int) buffer->idx;
 
     // VisualMetaFont
-    o.lookup_index = c->lookup_index;
-    o.subtable_index = c->subtable_index;
-    o.base_codepoint = buffer->info[glyph_pos].codepoint;
+    c->font->record_glyph_positioning (buffer->cur (), c->lookup_index, c->subtable_index, buffer->info[glyph_pos].codepoint);
 
     buffer->scratch_flags |= HB_BUFFER_SCRATCH_FLAG_HAS_GPOS_ATTACHMENT;
 

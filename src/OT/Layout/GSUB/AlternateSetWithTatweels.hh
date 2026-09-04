@@ -88,8 +88,8 @@ struct AlternateSetWithTatweels
 
     auto &info = c->buffer->cur ();
 
-    info.lefttatweel += tats.leftTatweel.to_float ();
-    info.righttatweel += tats.rightTatweel.to_float ();
+    if (!c->font->add_glyph_tatweels (info, tats.leftTatweel.to_float (), tats.rightTatweel.to_float ()))
+      return_trace (false);
 
     c->replace_glyph (subst);
 
