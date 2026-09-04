@@ -174,6 +174,12 @@ struct hb_font_t
     auto value = glyph_tatweels (info);
     return set_glyph_tatweels (info, value.left + left, value.right + right);
   }
+  bool adjust_glyph_parameters (hb_glyph_info_t &info,
+				const hb_glyph_parameter_adjustment_t *adjustments,
+				unsigned count) {
+    hb_glyph_parameter_adjustments_t value{count, adjustments};
+    return access_instance (HB_INSTANCE_ADJUST_PARAMETERS, info, &value);
+  }
   hb_glyph_provenance_t glyph_positioning (const hb_glyph_info_t &info) {
     hb_glyph_provenance_t value{};
     if (!info.instance_id) return value;

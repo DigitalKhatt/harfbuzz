@@ -46,7 +46,8 @@ typedef struct hb_glyph_info_t hb_glyph_info_t;
 typedef enum {
   HB_INSTANCE_READ_TATWEELS, HB_INSTANCE_WRITE_TATWEELS,
   HB_INSTANCE_READ_POSITIONING, HB_INSTANCE_WRITE_POSITIONING,
-  HB_INSTANCE_CLEAR_POSITIONING
+  HB_INSTANCE_CLEAR_POSITIONING,
+  HB_INSTANCE_ADJUST_PARAMETERS
 } hb_glyph_instance_operation_t;
 typedef struct {
   double left, right;
@@ -56,6 +57,19 @@ typedef struct {
   unsigned lookup_index, subtable_index;
   hb_codepoint_t base_codepoint;
 } hb_glyph_provenance_t;
+typedef enum {
+  HB_GLYPH_PARAMETER_ADD,
+  HB_GLYPH_PARAMETER_SET
+} hb_glyph_parameter_operation_t;
+typedef struct {
+  unsigned parameter;
+  hb_glyph_parameter_operation_t operation;
+  double value;
+} hb_glyph_parameter_adjustment_t;
+typedef struct {
+  unsigned count;
+  const hb_glyph_parameter_adjustment_t *adjustments;
+} hb_glyph_parameter_adjustments_t;
 typedef hb_bool_t (*hb_font_instance_func_t) (hb_font_t *font,
     hb_glyph_instance_operation_t operation, hb_glyph_info_t *info,
     void *payload, void *user_data);
