@@ -765,6 +765,42 @@ hb_buffer_diff (hb_buffer_t *buffer,
 		unsigned int position_fuzz);
 
 
+/* DigitalKhatt extension: application work at the GSUB/GPOS boundary. */
+
+/**
+ * hb_buffer_post_gsub_func_t:
+ * @buffer: The buffer after OpenType GSUB
+ * @font: The font used for shaping
+ * @user_data: Data passed to hb_buffer_set_post_gsub_func()
+ *
+ * Called after an OpenType GSUB table application, before initializing glyph
+ * advances and applying GPOS. The callback may change glyph IDs and external
+ * instance state (preserving glyph classes), but must not change buffer length, clusters or segment
+ * properties, reshape the same buffer, or throw across the callback boundary.
+ * This is an application hook, independent of diagnostic buffer messages.
+ * It is not called for empty buffers, non-OpenType shapers, or skipped GSUB.
+ */
+typedef void (*hb_buffer_post_gsub_func_t) (hb_buffer_t *buffer,
+                                          hb_font_t *font,
+                                          void *user_data);
+
+/**
+ * hb_buffer_set_post_gsub_func:
+ * @buffer: A buffer
+ * @func: (nullable): The post-GSUB callback, or NULL to disable it
+ * @user_data: (nullable): Callback data
+ * @destroy: (nullable): Releases callback data on replacement or destruction
+ *
+ * The callback survives buffer reset/clear, like the message callback. It is
+ * not copied by hb_buffer_create_similar() or hb_buffer_append(). A rejected
+ * registration, including a NULL callback, releases the supplied data.
+ * DigitalKhatt extension; not an upstream HarfBuzz API.
+ */
+HB_EXTERN void
+hb_buffer_set_post_gsub_func (hb_buffer_t *buffer,
+                             hb_buffer_post_gsub_func_t func,
+                             void *user_data, hb_destroy_func_t destroy);
+
 /*
  * Tracing.
  */

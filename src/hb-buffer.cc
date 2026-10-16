@@ -845,6 +845,8 @@ hb_buffer_destroy (hb_buffer_t *buffer)
 
   hb_free (buffer->info);
   hb_free (buffer->pos);
+  if (buffer->post_gsub_destroy)
+    buffer->post_gsub_destroy (buffer->post_gsub_data);
 #ifndef HB_NO_BUFFER_MESSAGE
   if (buffer->message_destroy)
     buffer->message_destroy (buffer->message_data);
@@ -2167,6 +2169,24 @@ hb_buffer_diff (hb_buffer_t *buffer,
   return result;
 }
 
+
+void
+hb_buffer_set_post_gsub_func (hb_buffer_t *buffer,
+                             hb_buffer_post_gsub_func_t func,
+                             void *user_data, hb_destroy_func_t destroy)
+{
+  if (unlikely (hb_object_is_immutable (buffer)))
+  {
+    if (destroy) destroy (user_data);
+    return;
+  }
+  if (buffer->post_gsub_destroy)
+    buffer->post_gsub_destroy (buffer->post_gsub_data);
+  buffer->post_gsub_func = func;
+  buffer->post_gsub_data = func ? user_data : nullptr;
+  buffer->post_gsub_destroy = func ? destroy : nullptr;
+  if (!func && destroy) destroy (user_data);
+}
 
 /*
  * Debugging.

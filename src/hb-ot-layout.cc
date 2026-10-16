@@ -2020,6 +2020,8 @@ void hb_ot_map_t::substitute (const hb_ot_shape_plan_t *plan, hb_font_t *font, h
   if (buffer->messaging () &&
       !buffer->message (font, "start table GSUB")) return;
   apply (proxy, plan, font, buffer);
+  if (buffer->post_gsub_func)
+    buffer->post_gsub_func (buffer, font, buffer->post_gsub_data);
   if (buffer->messaging ())
     (void) buffer->message (font, "end table GSUB");
 }

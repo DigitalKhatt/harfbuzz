@@ -132,6 +132,11 @@ struct hb_buffer_t
   /* The bits here reflect current allocations of the bytes in glyph_info_t's var1 and var2. */
 
 
+  /* Application callback; deliberately independent of diagnostic messaging. */
+  hb_buffer_post_gsub_func_t post_gsub_func;
+  void *post_gsub_data;
+  hb_destroy_func_t post_gsub_destroy;
+
   /*
    * Messaging callback
    */
