@@ -43,7 +43,7 @@
 
 typedef struct hb_cursive_anchor_context_t
 {
-  enum Type { entry, exit, mark, base, pair };
+  enum Type { entry, exit, mark, base, pair, single };
   hb_codepoint_t glyph_id;
   hb_codepoint_t base_glyph_id;
   uint32_t instance_id = 0;
@@ -52,6 +52,7 @@ typedef struct hb_cursive_anchor_context_t
   unsigned int subtable_index;
   Type type;
   void* data;
+  unsigned value_format = 0;
 } hb_cursive_anchor_context_t;
 
 typedef hb_bool_t (*hb_font_get_cursive_anchor_func_t) (

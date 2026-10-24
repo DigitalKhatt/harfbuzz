@@ -77,8 +77,32 @@ struct SinglePosFormat2
 			  c->buffer->idx);
     }
 
+    const HBUINT16 *position_values = &values[index * valueFormat.get_len ()];
+#ifndef HB_NO_JUSTIFICATION
+    HBUINT16 callback_values[16];
+    const auto parameters = c->font->glyph_tatweels (buffer->cur());
+    if ((buffer->useCallback || parameters.native_parameters) &&
+        (parameters.native_parameters || parameters.left != 0 || parameters.right != 0))
+    {
+      const unsigned length = valueFormat.get_len ();
+      if (unlikely (length > ARRAY_LENGTH (callback_values)))
+        return_trace (false);
+      memcpy (callback_values, position_values, length * sizeof (HBUINT16));
+      hb_cursive_anchor_context_t context;
+      context.glyph_id = buffer->cur().codepoint;
+      context.base_glyph_id = buffer->cur().codepoint;
+      context.instance_id = buffer->cur().instance_id;
+      context.lookup_index = c->lookup_index;
+      context.subtable_index = c->subtable_index;
+      context.type = hb_cursive_anchor_context_t::single;
+      context.data = callback_values;
+      context.value_format = valueFormat;
+      c->font->get_cursive_anchor (&context, nullptr, nullptr);
+      position_values = callback_values;
+    }
+#endif
     valueFormat.apply_value (c, this,
-                             &values[index * valueFormat.get_len ()],
+                             position_values,
                              buffer->cur_pos(), &buffer->cur());
 
     if (HB_BUFFER_MESSAGE_MORE && c->buffer->messaging ())
